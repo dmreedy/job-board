@@ -947,6 +947,10 @@ let syncSecret = null;
 // Cards are soft-deleted (tombstoned), not removed outright — this is what
 // lets a deletion actually propagate to other instances on Synchronize.
 // Anywhere the board displays or reasons about "what exists", use this.
+function hopperLabel(){
+  return currentUser ? `${currentUser}'s Hopper` : 'My Hopper';
+}
+
 function liveCards(){
   return cards.filter(c=>!c.deleted);
 }
@@ -1624,7 +1628,7 @@ function render(){
     colEl.dataset.col = col.key;
     colEl.innerHTML = `
       <div class="col-tab">
-        <span class="name">${col.label}${col.shared ? '<span class="shared-mark">shared</span>' : ''}</span>
+        <span class="name">${col.key === 'hopper' ? hopperLabel() : col.label}${col.shared ? '<span class="shared-mark">shared</span>' : ''}</span>
         <span class="count">${colCards.length}</span>
       </div>
       <div class="col-subbar">
@@ -1639,7 +1643,7 @@ function render(){
         ${col.shared ? `
         <label class="claimed-toggle-label">
           <input type="checkbox" class="claimed-toggle-cb" id="claimedToggleCb" ${hideClaimedPostings ? 'checked' : ''} />
-          <span>Hide claimed</span>
+          <span>Hide ${currentUser ? escapeHtml(currentUser) + "'s" : 'my'} claimed</span>
         </label>` : ''}
       </div>
       <div class="col-body" data-col="${col.key}"></div>
@@ -1968,6 +1972,7 @@ function escapeAttr(str){ return escapeHtml(str); }
 
 function openModal(card){
   editingId = card ? card.id : null;
+  document.querySelector('#f-column option[value="hopper"]').textContent = hopperLabel();
   document.getElementById('modalTitle').textContent = card ? 'Edit entry' : 'New entry';
   document.getElementById('f-role').value = card ? card.role || '' : '';
   document.getElementById('f-company').value = card ? card.company || '' : '';
@@ -2073,6 +2078,7 @@ function parsePosting(text, url){
 
 function openModalPrefill(data){
   editingId = null;
+  document.querySelector('#f-column option[value="hopper"]').textContent = hopperLabel();
   document.getElementById('modalTitle').textContent = 'New entry';
   document.getElementById('f-role').value = data.role || '';
   document.getElementById('f-company').value = data.company || '';
