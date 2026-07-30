@@ -84,6 +84,12 @@
   .entry-btn{ border-radius:999px; }
   .entry-btn:first-child{ border-radius:999px 0 0 999px; }
   .entry-btn:last-child{ border-radius:0 999px 999px 0; }
+  .view-btn.active{
+    background:var(--brass) !important;
+    color:#1b1e24 !important;
+    border-color:var(--brass) !important;
+    font-weight:700;
+  }
 
   #syncBtn.sync-dirty{
     background:var(--brass) !important;
@@ -398,6 +404,42 @@
     margin:0 2px;
     background:var(--postings);
     opacity:0.55;
+  }
+  .postings-view-main{
+    flex:1 1 0;
+    min-width:0;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    background:
+      linear-gradient(rgba(184,160,214,0.07), rgba(184,160,214,0.07)),
+      var(--panel);
+    border:1px solid rgba(184,160,214,0.4);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .postings-view-main .col-tab{ --accent: var(--postings); flex-shrink:0; }
+  .postings-view-main .col-subbar{
+    background:rgba(184,160,214,0.06);
+    flex-shrink:0;
+    flex-direction:row;
+    align-items:center;
+    gap:12px;
+  }
+  .postings-view-main .col-sort-select{ width:auto; min-width:170px; }
+  .postings-grid{
+    flex:1;
+    min-height:0;
+    overflow-y:auto;
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+    gap:14px;
+    align-content:start;
+    padding:14px;
+  }
+  .board.postings-mode > .column{
+    flex:0 1 320px;
+    max-width:320px;
   }
   .col-tab .count{
     font-family:'IBM Plex Mono',monospace;
@@ -741,7 +783,13 @@
     <span>Card aging</span>
   </label>
 </div>
-<div class="filterbar" id="filterbar" style="display:none;"></div>
+<div style="display:flex; align-items:center; gap:14px; padding:14px 32px 0;">
+  <div style="display:flex; gap:0; flex-shrink:0;">
+    <button class="add-btn view-btn active" id="viewBoardBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px 0 0 999px;">☰ Board</button>
+    <button class="add-btn view-btn" id="viewPostingsBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:0 999px 999px 0;">⊞ Postings Grid</button>
+  </div>
+  <div class="filterbar" id="filterbar" style="display:none; padding:0;"></div>
+</div>
 <div class="bulkbar" id="bulkbar" style="display:none;"></div>
 <div class="board" id="board"></div>
 
@@ -941,6 +989,7 @@ COLUMNS.forEach(c=> columnSortMode[c.key] = 'updated-desc');
 let selectedIds = new Set();
 let hideClaimedPostings = true;
 let decayEnabled = true;
+let currentView = 'board'; // 'board' | 'postings'
 let syncUrl = null;
 let syncSecret = null;
 
@@ -949,6 +998,10 @@ let syncSecret = null;
 // Anywhere the board displays or reasons about "what exists", use this.
 function hopperLabel(){
   return currentUser ? `${currentUser}'s Hopper` : 'My Hopper';
+}
+
+function discardedLabel(){
+  return currentUser ? `Discarded by ${currentUser}` : 'Discarded';
 }
 
 function liveCards(){
@@ -1585,6 +1638,7 @@ function renderNotesBlock(notes){
 function render(){
   const board = document.getElementById('board');
   board.innerHTML = '';
+  board.classList.toggle('postings-mode', currentView === 'postings');
   const statsEl = document.getElementById('stats');
 
   renderFilterbar();
@@ -1620,7 +1674,167 @@ function render(){
     return `<span><b>${n}</b> ${c.label.toLowerCase()}</span>`;
   }).join('');
 
-  COLUMNS.forEach(col=>{
+  // Builds one fully-wired card element. Reused by both the normal narrow
+  // column lists and the wide Postings grid — `highlightEl` is whichever
+  // container should get the 'drag-over' highlight while dragging over it.
+  function buildCardEl(card, col, highlightEl){
+    const cardEl = document.createElement('div');
+    cardEl.className = 'card';
+    cardEl.dataset.col = col.key;
+    cardEl.draggable = true;
+    cardEl.dataset.id = card.id;
+    const tags = [];
+    if(card.location) tags.push(`<span class="tag">${escapeHtml(card.location)}</span>`);
+    if(card.salary) tags.push(`<span class="tag">${escapeHtml(card.salary)}</span>`);
+    if(card.date) tags.push(`<span class="tag">${fmtDate(card.date)}</span>`);
+    const userTags = (card.tags || []).map(t=>{
+      const isSrc = t.startsWith('from:');
+      return `<span class="utag${isSrc ? ' src' : ''}">${escapeHtml(t)}</span>`;
+    }).join('');
+    const selectable = col.key === 'hopper';
+    if(selectable) cardEl.classList.add('selectable');
+    if(selectable && selectedIds.has(card.id)) cardEl.classList.add('selected');
+    const isClaimed = col.shared && claimedSourceIds.has(card.id);
+    if(isClaimed) cardEl.classList.add('claimed');
+    const decay = decayEnabled ? decayStyleFor(card, col, isClaimed) : null;
+    if(decay){
+      cardEl.style.cssText += decay.style;
+      cardEl.title = decay.days !== null
+        ? `Last updated ${decay.days} day${decay.days===1?'':'s'} ago`
+        : (col.key === 'passed' ? 'Ghosted' : 'Discarded');
+    }
+    cardEl.innerHTML = `
+      ${selectable ? `<span class="select-mark">${selectedIds.has(card.id) ? '✓' : ''}</span>` : ''}
+      <div class="card-actions">
+        <button class="icon-btn edit-btn" title="Edit">✎</button>
+      </div>
+      ${card.url ? `
+      <a href="${escapeAttr(card.url)}" target="_blank" class="posting-link">
+        <p class="company">${escapeHtml(card.company || 'Unknown company')}</p>
+        <p class="role">${escapeHtml(card.role || '')}</p>
+        <span class="posting-link-hint">↗ View posting</span>
+      </a>` : `
+      <p class="company">${escapeHtml(card.company || 'Unknown company')}</p>
+      <p class="role">${escapeHtml(card.role || '')}</p>`}
+      <div class="meta">${tags.join('')}</div>
+      ${userTags ? `<div class="utags">${userTags}</div>` : ''}
+      ${card.notes ? renderNotesBlock(card.notes) : ''}
+      ${isClaimed ? `<span class="claimed-badge">Already in your Hopper</span>` : ''}
+      ${col.shared && !isClaimed ? `<button class="pull-btn" data-pull="${card.id}">Pull to my Hopper</button>` : ''}
+    `;
+    if(selectable){
+      cardEl.addEventListener('click', (e)=>{
+        if(e.target.closest('a')) return;
+        const nowSelected = selectedIds.has(card.id);
+        if(nowSelected){
+          selectedIds.delete(card.id);
+        }else{
+          selectedIds.add(card.id);
+        }
+        cardEl.classList.toggle('selected', !nowSelected);
+        const mark = cardEl.querySelector('.select-mark');
+        if(mark) mark.textContent = !nowSelected ? '✓' : '';
+        renderBulkBar();
+      });
+    }
+    cardEl.querySelector('.edit-btn').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      openModal(card);
+    });
+    const pullBtn = cardEl.querySelector('[data-pull]');
+    if(pullBtn){
+      pullBtn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        pullToHopper(card.id);
+      });
+    }
+    const notesWrap = cardEl.querySelector('.notes-wrap');
+    if(notesWrap){
+      const tooltip = notesWrap.querySelector('.notes-tooltip');
+      const showTip = ()=>{
+        tooltip.style.display = 'block';
+        const rect = notesWrap.getBoundingClientRect();
+        let left = rect.left;
+        let top = rect.bottom + 6;
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+        const tipRect = tooltip.getBoundingClientRect();
+        if(tipRect.right > window.innerWidth - 8){
+          left = Math.max(8, window.innerWidth - tipRect.width - 8);
+          tooltip.style.left = left + 'px';
+        }
+        if(tipRect.bottom > window.innerHeight - 8){
+          top = rect.top - tipRect.height - 6;
+          tooltip.style.top = Math.max(8, top) + 'px';
+        }
+      };
+      const hideTip = ()=>{
+        if(!notesWrap.classList.contains('tt-open')) tooltip.style.display = 'none';
+      };
+      notesWrap.addEventListener('mouseenter', showTip);
+      notesWrap.addEventListener('mouseleave', hideTip);
+      notesWrap.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const nowOpen = notesWrap.classList.toggle('tt-open');
+        if(nowOpen) showTip(); else tooltip.style.display = 'none';
+      });
+    }
+    cardEl.addEventListener('dragstart', (e)=>{
+      cardEl.classList.add('dragging');
+      e.dataTransfer.setData('text/plain', card.id);
+    });
+    cardEl.addEventListener('dragend', ()=>{
+      cardEl.classList.remove('dragging');
+      document.querySelectorAll('.card.drop-before, .card.drop-after').forEach(el=>{
+        el.classList.remove('drop-before','drop-after');
+      });
+    });
+    cardEl.addEventListener('dragover', (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      if(highlightEl) highlightEl.classList.add('drag-over');
+      const rect = cardEl.getBoundingClientRect();
+      const before = (e.clientY - rect.top) < rect.height / 2;
+      cardEl.classList.toggle('drop-before', before);
+      cardEl.classList.toggle('drop-after', !before);
+    });
+    cardEl.addEventListener('dragleave', ()=>{
+      cardEl.classList.remove('drop-before','drop-after');
+    });
+    cardEl.addEventListener('drop', (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      if(highlightEl) highlightEl.classList.remove('drag-over');
+      const before = cardEl.classList.contains('drop-before');
+      cardEl.classList.remove('drop-before','drop-after');
+      const draggedId = e.dataTransfer.getData('text/plain');
+      if(draggedId === card.id) return;
+      moveCardTo(draggedId, col.key, card.id, before);
+    });
+    return cardEl;
+  }
+
+  // Wires a container as a drop target for a given column, independent of
+  // whatever visual shape that container is (narrow list vs. wide grid).
+  function wireDropZone(zoneEl, colKey, highlightEl){
+    zoneEl.addEventListener('dragover', (e)=>{
+      e.preventDefault();
+      if(highlightEl) highlightEl.classList.add('drag-over');
+    });
+    zoneEl.addEventListener('dragleave', ()=>{
+      if(highlightEl) highlightEl.classList.remove('drag-over');
+    });
+    zoneEl.addEventListener('drop', (e)=>{
+      e.preventDefault();
+      if(highlightEl) highlightEl.classList.remove('drag-over');
+      const id = e.dataTransfer.getData('text/plain');
+      moveCardTo(id, colKey, null, false);
+    });
+  }
+
+  // Builds a fully-wired narrow column (header + sort/filter subbar + body).
+  // Used for every column in board view, and for Discarded in postings view.
+  function buildColumnEl(col){
     let colCards = poolFor(col);
     colCards = sortCards(colCards, columnSortMode[col.key]);
     const colEl = document.createElement('div');
@@ -1628,7 +1842,7 @@ function render(){
     colEl.dataset.col = col.key;
     colEl.innerHTML = `
       <div class="col-tab">
-        <span class="name">${col.key === 'hopper' ? hopperLabel() : col.label}${col.shared ? '<span class="shared-mark">shared</span>' : ''}</span>
+        <span class="name">${col.key === 'hopper' ? hopperLabel() : col.key === 'discarded' ? discardedLabel() : col.label}${col.shared ? '<span class="shared-mark">shared</span>' : ''}</span>
         <span class="count">${colCards.length}</span>
       </div>
       <div class="col-subbar">
@@ -1648,7 +1862,6 @@ function render(){
       </div>
       <div class="col-body" data-col="${col.key}"></div>
     `;
-    board.appendChild(colEl);
     const body = colEl.querySelector('.col-body');
     colEl.querySelector('.col-sort-select').addEventListener('change', (e)=>{
       columnSortMode[col.key] = e.target.value;
@@ -1660,169 +1873,93 @@ function render(){
         render();
       });
     }
-
     if(colCards.length === 0){
       const filtered = activeTagFilters.length > 0 || searchQuery.trim().length > 0;
       body.innerHTML = `<div class="col-empty">${filtered ? 'no matches here' : 'nothing filed here yet'}</div>`;
     }
-
     colCards.forEach(card=>{
-      const cardEl = document.createElement('div');
-      cardEl.className = 'card';
-      cardEl.dataset.col = col.key;
-      cardEl.draggable = true;
-      cardEl.dataset.id = card.id;
-      const tags = [];
-      if(card.location) tags.push(`<span class="tag">${escapeHtml(card.location)}</span>`);
-      if(card.salary) tags.push(`<span class="tag">${escapeHtml(card.salary)}</span>`);
-      if(card.date) tags.push(`<span class="tag">${fmtDate(card.date)}</span>`);
-      const userTags = (card.tags || []).map(t=>{
-        const isSrc = t.startsWith('from:');
-        return `<span class="utag${isSrc ? ' src' : ''}">${escapeHtml(t)}</span>`;
-      }).join('');
-      const selectable = col.key === 'hopper';
-      if(selectable) cardEl.classList.add('selectable');
-      if(selectable && selectedIds.has(card.id)) cardEl.classList.add('selected');
-      const isClaimed = col.shared && claimedSourceIds.has(card.id);
-      if(isClaimed) cardEl.classList.add('claimed');
-      const decay = decayEnabled ? decayStyleFor(card, col, isClaimed) : null;
-      if(decay){
-        cardEl.style.cssText += decay.style;
-        cardEl.title = decay.days !== null
-          ? `Last updated ${decay.days} day${decay.days===1?'':'s'} ago`
-          : (col.key === 'passed' ? 'Ghosted' : 'Discarded');
-      }
-      cardEl.innerHTML = `
-        ${selectable ? `<span class="select-mark">${selectedIds.has(card.id) ? '✓' : ''}</span>` : ''}
-        <div class="card-actions">
-          <button class="icon-btn edit-btn" title="Edit">✎</button>
-        </div>
-        ${card.url ? `
-        <a href="${escapeAttr(card.url)}" target="_blank" class="posting-link">
-          <p class="company">${escapeHtml(card.company || 'Unknown company')}</p>
-          <p class="role">${escapeHtml(card.role || '')}</p>
-          <span class="posting-link-hint">↗ View posting</span>
-        </a>` : `
-        <p class="company">${escapeHtml(card.company || 'Unknown company')}</p>
-        <p class="role">${escapeHtml(card.role || '')}</p>`}
-        <div class="meta">${tags.join('')}</div>
-        ${userTags ? `<div class="utags">${userTags}</div>` : ''}
-        ${card.notes ? renderNotesBlock(card.notes) : ''}
-        ${isClaimed ? `<span class="claimed-badge">Already in your Hopper</span>` : ''}
-        ${col.shared && !isClaimed ? `<button class="pull-btn" data-pull="${card.id}">Pull to my Hopper</button>` : ''}
-      `;
-      if(selectable){
-        cardEl.addEventListener('click', (e)=>{
-          if(e.target.closest('a')) return;
-          const nowSelected = selectedIds.has(card.id);
-          if(nowSelected){
-            selectedIds.delete(card.id);
-          }else{
-            selectedIds.add(card.id);
-          }
-          cardEl.classList.toggle('selected', !nowSelected);
-          const mark = cardEl.querySelector('.select-mark');
-          if(mark) mark.textContent = !nowSelected ? '✓' : '';
-          renderBulkBar();
-        });
-      }
-      cardEl.querySelector('.edit-btn').addEventListener('click', (e)=>{
-        e.stopPropagation();
-        openModal(card);
-      });
-      const pullBtn = cardEl.querySelector('[data-pull]');
-      if(pullBtn){
-        pullBtn.addEventListener('click', (e)=>{
-          e.stopPropagation();
-          pullToHopper(card.id);
-        });
-      }
-      const notesWrap = cardEl.querySelector('.notes-wrap');
-      if(notesWrap){
-        const tooltip = notesWrap.querySelector('.notes-tooltip');
-        const showTip = ()=>{
-          tooltip.style.display = 'block';
-          const rect = notesWrap.getBoundingClientRect();
-          let left = rect.left;
-          let top = rect.bottom + 6;
-          tooltip.style.left = left + 'px';
-          tooltip.style.top = top + 'px';
-          const tipRect = tooltip.getBoundingClientRect();
-          if(tipRect.right > window.innerWidth - 8){
-            left = Math.max(8, window.innerWidth - tipRect.width - 8);
-            tooltip.style.left = left + 'px';
-          }
-          if(tipRect.bottom > window.innerHeight - 8){
-            top = rect.top - tipRect.height - 6;
-            tooltip.style.top = Math.max(8, top) + 'px';
-          }
-        };
-        const hideTip = ()=>{
-          if(!notesWrap.classList.contains('tt-open')) tooltip.style.display = 'none';
-        };
-        notesWrap.addEventListener('mouseenter', showTip);
-        notesWrap.addEventListener('mouseleave', hideTip);
-        notesWrap.addEventListener('click', (e)=>{
-          e.stopPropagation();
-          const nowOpen = notesWrap.classList.toggle('tt-open');
-          if(nowOpen) showTip(); else tooltip.style.display = 'none';
-        });
-      }
-      cardEl.addEventListener('dragstart', (e)=>{
-        cardEl.classList.add('dragging');
-        e.dataTransfer.setData('text/plain', card.id);
-      });
-      cardEl.addEventListener('dragend', ()=>{
-        cardEl.classList.remove('dragging');
-        document.querySelectorAll('.card.drop-before, .card.drop-after').forEach(el=>{
-          el.classList.remove('drop-before','drop-after');
-        });
-      });
-      cardEl.addEventListener('dragover', (e)=>{
-        e.preventDefault();
-        e.stopPropagation();
-        colEl.classList.add('drag-over');
-        const rect = cardEl.getBoundingClientRect();
-        const before = (e.clientY - rect.top) < rect.height / 2;
-        cardEl.classList.toggle('drop-before', before);
-        cardEl.classList.toggle('drop-after', !before);
-      });
-      cardEl.addEventListener('dragleave', ()=>{
-        cardEl.classList.remove('drop-before','drop-after');
-      });
-      cardEl.addEventListener('drop', (e)=>{
-        e.preventDefault();
-        e.stopPropagation();
-        colEl.classList.remove('drag-over');
-        const before = cardEl.classList.contains('drop-before');
-        cardEl.classList.remove('drop-before','drop-after');
-        const draggedId = e.dataTransfer.getData('text/plain');
-        if(draggedId === card.id) return;
-        moveCardTo(draggedId, col.key, card.id, before);
-      });
-      body.appendChild(cardEl);
+      body.appendChild(buildCardEl(card, col, colEl));
     });
+    wireDropZone(body, col.key, colEl);
+    return colEl;
+  }
 
-    body.addEventListener('dragover', (e)=>{
-      e.preventDefault();
-      colEl.classList.add('drag-over');
+  if(currentView === 'postings'){
+    renderPostingsView(board, poolFor, buildCardEl, wireDropZone, buildColumnEl);
+  }else{
+    COLUMNS.forEach(col=>{
+      const colEl = buildColumnEl(col);
+      board.appendChild(colEl);
+      if(col.shared){
+        const divider = document.createElement('div');
+        divider.className = 'board-divider';
+        board.appendChild(divider);
+      }
     });
-    body.addEventListener('dragleave', ()=> colEl.classList.remove('drag-over'));
-    body.addEventListener('drop', (e)=>{
-      e.preventDefault();
-      colEl.classList.remove('drag-over');
-      const id = e.dataTransfer.getData('text/plain');
-      moveCardTo(id, col.key, null, false);
-    });
-
-    if(col.shared){
-      const divider = document.createElement('div');
-      divider.className = 'board-divider';
-      board.appendChild(divider);
-    }
-  });
+  }
 
   renderBulkBar();
+}
+
+// The Postings column expanded into a scrollable grid, with the current
+// user's Discarded column still visible alongside it (reusing the exact
+// same narrow-column builder as board view, for a consistent look/behavior).
+function renderPostingsView(board, poolFor, buildCardEl, wireDropZone, buildColumnEl){
+  const postingsCol = COLUMNS.find(c=>c.key==='postings');
+  const discardedCol = COLUMNS.find(c=>c.key==='discarded');
+
+  let gridCards = poolFor(postingsCol);
+  gridCards = sortCards(gridCards, columnSortMode['postings']);
+
+  const mainEl = document.createElement('div');
+  mainEl.className = 'postings-view-main';
+  mainEl.innerHTML = `
+    <div class="col-tab">
+      <span class="name">Postings<span class="shared-mark">shared</span></span>
+      <span class="count">${gridCards.length}</span>
+    </div>
+    <div class="col-subbar">
+      <select class="col-sort-select" data-col="postings">
+        <option value="updated-desc"${columnSortMode['postings']==='updated-desc'?' selected':''}>Sort: last updated</option>
+        <option value="manual"${columnSortMode['postings']==='manual'?' selected':''}>Sort: manual</option>
+        <option value="date-desc"${columnSortMode['postings']==='date-desc'?' selected':''}>Sort: date (newest)</option>
+        <option value="date-asc"${columnSortMode['postings']==='date-asc'?' selected':''}>Sort: date (oldest)</option>
+        <option value="company-asc"${columnSortMode['postings']==='company-asc'?' selected':''}>Sort: company A–Z</option>
+        <option value="role-asc"${columnSortMode['postings']==='role-asc'?' selected':''}>Sort: role A–Z</option>
+      </select>
+      <label class="claimed-toggle-label">
+        <input type="checkbox" class="claimed-toggle-cb" id="claimedToggleCb" ${hideClaimedPostings ? 'checked' : ''} />
+        <span>Hide ${currentUser ? escapeHtml(currentUser) + "'s" : 'my'} claimed</span>
+      </label>
+    </div>
+    <div class="postings-grid"></div>
+  `;
+  board.appendChild(mainEl);
+
+  mainEl.querySelector('.col-sort-select').addEventListener('change', (e)=>{
+    columnSortMode['postings'] = e.target.value;
+    render();
+  });
+  mainEl.querySelector('#claimedToggleCb').addEventListener('change', (e)=>{
+    hideClaimedPostings = e.target.checked;
+    render();
+  });
+
+  const gridEl = mainEl.querySelector('.postings-grid');
+  if(gridCards.length === 0){
+    const filtered = activeTagFilters.length > 0 || searchQuery.trim().length > 0;
+    gridEl.innerHTML = `<div class="col-empty">${filtered ? 'no matches here' : 'nothing filed here yet'}</div>`;
+  }
+  gridCards.forEach(card=>{
+    gridEl.appendChild(buildCardEl(card, postingsCol, mainEl));
+  });
+  wireDropZone(gridEl, 'postings', mainEl);
+
+  const divider = document.createElement('div');
+  divider.className = 'board-divider';
+  board.appendChild(divider);
+
+  board.appendChild(buildColumnEl(discardedCol));
 }
 
 function renderBulkBar(){
@@ -1973,6 +2110,7 @@ function escapeAttr(str){ return escapeHtml(str); }
 function openModal(card){
   editingId = card ? card.id : null;
   document.querySelector('#f-column option[value="hopper"]').textContent = hopperLabel();
+  document.querySelector('#f-column option[value="discarded"]').textContent = discardedLabel();
   document.getElementById('modalTitle').textContent = card ? 'Edit entry' : 'New entry';
   document.getElementById('f-role').value = card ? card.role || '' : '';
   document.getElementById('f-company').value = card ? card.company || '' : '';
@@ -2027,6 +2165,15 @@ document.getElementById('decayToggleCb').addEventListener('change', (e)=>{
   render();
 });
 
+function setView(view){
+  currentView = view;
+  document.getElementById('viewBoardBtn').classList.toggle('active', view === 'board');
+  document.getElementById('viewPostingsBtn').classList.toggle('active', view === 'postings');
+  render();
+}
+document.getElementById('viewBoardBtn').addEventListener('click', ()=> setView('board'));
+document.getElementById('viewPostingsBtn').addEventListener('click', ()=> setView('postings'));
+
 function parsePosting(text, url){
   const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
   const result = {role:'', company:'', location:'', salary:'', url: url || '', notes:''};
@@ -2079,6 +2226,7 @@ function parsePosting(text, url){
 function openModalPrefill(data){
   editingId = null;
   document.querySelector('#f-column option[value="hopper"]').textContent = hopperLabel();
+  document.querySelector('#f-column option[value="discarded"]').textContent = discardedLabel();
   document.getElementById('modalTitle').textContent = 'New entry';
   document.getElementById('f-role').value = data.role || '';
   document.getElementById('f-company').value = data.company || '';
