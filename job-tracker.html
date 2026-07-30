@@ -1,0 +1,2365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Job Search</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%231b1e24'/%3E%3Crect x='14' y='16' width='36' height='34' rx='3' fill='%232a2f38' stroke='%233a3f4a' stroke-width='1.5'/%3E%3Ccircle cx='22' cy='24' r='4' fill='%23c9a35d'/%3E%3Crect x='30' y='22' width='14' height='3' rx='1.5' fill='%23b9b3a0'/%3E%3Crect x='20' y='34' width='24' height='2.5' rx='1.25' fill='%233a3f4a'/%3E%3Crect x='20' y='40' width='18' height='2.5' rx='1.25' fill='%233a3f4a'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #1b1e24;
+    --panel: #23272f;
+    --panel-2: #2a2f38;
+    --hairline: #3a3f4a;
+    --paper: #ece7d8;
+    --paper-dim: #b9b3a0;
+    --brass: #c9a35d;
+    --brass-dim: #8a723f;
+    --postings: #b8a0d6;
+    --hopper: #6b7a99;
+    --applied: #7c9a6f;
+    --interviewing: #4f8a8a;
+    --offer: #c9a35d;
+    --closed: #a6543f;
+    --passed: #756e63;
+    --discarded: #5c564c;
+  }
+  *{box-sizing:border-box;}
+  html, body{
+    height:100%;
+    overflow:hidden; /* the page itself never scrolls — only .col-body does */
+  }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    display:flex;
+    flex-direction:column;
+  }
+  .topbar{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    padding:28px 32px 18px;
+    border-bottom:1px solid var(--hairline);
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  .topbar h1{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:26px;
+    margin:0;
+    letter-spacing:0.2px;
+  }
+  .topbar .sub{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--paper-dim);
+    margin-top:4px;
+  }
+  .stats{
+    display:flex;
+    gap:22px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--paper-dim);
+  }
+  .stats b{ color:var(--paper); font-weight:500; }
+  .add-btn{
+    background:var(--brass);
+    color:#1b1e24;
+    border:none;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    padding:9px 16px;
+    border-radius:3px;
+    cursor:pointer;
+    margin-left:20px;
+  }
+  .add-btn:hover{ background:#dab472; }
+  .entry-btn{ border-radius:999px; }
+  .entry-btn:first-child{ border-radius:999px 0 0 999px; }
+  .entry-btn:last-child{ border-radius:0 999px 999px 0; }
+
+  #syncBtn.sync-dirty{
+    background:var(--brass) !important;
+    color:#1b1e24 !important;
+    border-color:var(--brass) !important;
+    font-weight:600;
+    animation: sync-pulse 1.7s ease-in-out infinite;
+  }
+  @keyframes sync-pulse{
+    0%, 100% { box-shadow: 0 0 0 0 rgba(201,163,93,0.55); }
+    50% { box-shadow: 0 0 0 7px rgba(201,163,93,0); }
+  }
+  .toprow{ display:flex; align-items:center; flex-wrap:wrap; gap:0; }
+
+  .user-picker{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding-left:14px;
+    border-left:1px solid var(--hairline);
+  }
+  .user-picker label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+  }
+  .user-picker select{
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:3px;
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    padding:7px 10px;
+  }
+
+  .controlbar{
+    display:flex;
+    gap:10px;
+    padding:18px 32px 0;
+  }
+  .controlbar input[type="text"]{
+    flex:1;
+    max-width:340px;
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:3px;
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    padding:8px 11px;
+  }
+  .controlbar input[type="text"]:focus{ outline:none; border-color:var(--brass-dim); }
+  .controlbar select{
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:3px;
+    color:var(--paper);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    padding:8px 10px;
+  }
+  .col-subbar{
+    padding:7px 12px;
+    border-bottom:1px solid var(--hairline);
+    background:var(--panel-2);
+    flex-shrink:0;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .column.shared .col-subbar{
+    background:rgba(184,160,214,0.06);
+  }
+  .col-sort-select{
+    width:100%;
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:3px;
+    color:var(--paper-dim);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    padding:5px 6px;
+  }
+  .col-sort-select:hover{ border-color:var(--paper-dim); }
+  .col-sort-select:focus{ outline:none; border-color:var(--brass-dim); color:var(--paper); }
+  .claimed-toggle-label{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    cursor:pointer;
+  }
+  .claimed-toggle-cb{
+    appearance:none;
+    -webkit-appearance:none;
+    width:13px;
+    height:13px;
+    flex-shrink:0;
+    border:1.5px solid var(--hairline);
+    border-radius:3px;
+    background:var(--panel);
+    cursor:pointer;
+    position:relative;
+  }
+  .claimed-toggle-cb:checked{
+    background:var(--brass);
+    border-color:var(--brass);
+  }
+  .claimed-toggle-cb:checked::after{
+    content:'✓';
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:9px;
+    font-weight:700;
+    color:#1b1e24;
+  }
+  .claimed-toggle-label:hover .claimed-toggle-cb{ border-color:var(--brass-dim); }
+
+  .card.claimed{
+    opacity:0.55;
+    filter:grayscale(0.5);
+  }
+  .card.claimed:hover{ opacity:0.8; }
+  .claimed-badge{
+    display:inline-block;
+    margin:8px 0 0 16px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--paper-dim);
+    border:1px solid var(--hairline);
+    border-radius:8px;
+    padding:2px 8px;
+  }
+  .pull-btn.disabled{
+    color:var(--paper-dim);
+    cursor:default;
+    background:none;
+  }
+  .pull-btn.disabled:hover{ border-color:var(--hairline); color:var(--paper-dim); }
+
+  .filterbar{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:7px;
+    padding:14px 32px 0;
+  }
+  .filterbar .flabel{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--paper-dim);
+    margin-right:4px;
+  }
+  .ftag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--paper-dim);
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:12px;
+    padding:3px 11px;
+    cursor:pointer;
+  }
+  .ftag:hover{ border-color:var(--paper-dim); }
+  .ftag.active{
+    background:var(--brass);
+    border-color:var(--brass);
+    color:#1b1e24;
+  }
+  .ftag.clear{ color:var(--paper-dim); text-decoration:underline; background:none; border:none; }
+
+  .card .utags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:5px;
+    margin:6px 0 0 16px;
+  }
+  .utag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--brass);
+    background:rgba(201,163,93,0.14);
+    border-radius:10px;
+    padding:1px 8px;
+  }
+  .utag.src{
+    color:var(--postings);
+    background:rgba(184,160,214,0.16);
+  }
+
+  .bulkbar{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:10px 32px;
+    margin:14px 32px 0;
+    background:rgba(201,163,93,0.1);
+    border:1px solid var(--brass-dim);
+    border-radius:4px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--paper);
+  }
+  .bulkbar .count{ font-weight:600; }
+  .bulkbar .spacer{ flex:1; }
+
+  .card.selectable::before{ display:none; }
+  .select-mark{
+    position:absolute;
+    top:9px;
+    left:9px;
+    width:14px;
+    height:14px;
+    border:1.5px solid var(--hairline);
+    border-radius:3px;
+    background:var(--panel);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:9.5px;
+    font-weight:700;
+    color:#1b1e24;
+    pointer-events:none;
+  }
+  .card.selectable{ padding-left:30px; cursor:pointer; }
+  .card.selectable:hover{ border-color:var(--brass-dim); }
+  .card.selectable.selected{
+    border-color:var(--brass);
+    background:
+      linear-gradient(rgba(201,163,93,0.1), rgba(201,163,93,0.1)),
+      var(--panel-2);
+  }
+  .card.selectable.selected .select-mark{
+    background:var(--brass);
+    border-color:var(--brass);
+  }
+
+  .board{
+    display:flex;
+    gap:16px;
+    padding:22px 32px 40px;
+    overflow-x:auto;
+    align-items:stretch;
+    flex:1;
+    min-height:0;
+  }
+  .column{
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:4px;
+    flex:1 1 260px;
+    min-width:250px;
+    max-width:360px;
+    display:flex;
+    flex-direction:column;
+  }
+  .column.shared{
+    border-style:solid;
+    border-color:rgba(184,160,214,0.4);
+    background:
+      linear-gradient(rgba(184,160,214,0.07), rgba(184,160,214,0.07)),
+      var(--panel);
+  }
+  .column.shared .col-tab{
+    background:rgba(184,160,214,0.08);
+  }
+  .column.drag-over{ border-color:var(--brass); }
+  .col-tab{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 12px;
+    border-bottom:1px solid var(--hairline);
+    border-top:3px solid var(--accent);
+    border-radius:4px 4px 0 0;
+    flex-shrink:0;
+  }
+  .col-tab .name{
+    font-family:'Fraunces',serif;
+    font-size:14.5px;
+    font-weight:500;
+    letter-spacing:0.2px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .col-tab .name .shared-mark{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px;
+    color:var(--postings);
+    border:1px solid var(--postings);
+    border-radius:8px;
+    padding:1px 6px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+  }
+  .board-divider{
+    width:2px;
+    flex-shrink:0;
+    align-self:stretch;
+    margin:0 2px;
+    background:var(--postings);
+    opacity:0.55;
+  }
+  .col-tab .count{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--paper-dim);
+    background:var(--panel-2);
+    border-radius:10px;
+    padding:1px 8px;
+  }
+  .col-body{
+    padding:10px;
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+    min-height:60px;
+    flex:1;
+    overflow-y:auto;
+    scrollbar-width:thin;
+    scrollbar-color:var(--hairline) transparent;
+  }
+  .col-body::-webkit-scrollbar{ width:7px; }
+  .col-body::-webkit-scrollbar-track{ background:transparent; }
+  .col-body::-webkit-scrollbar-thumb{ background:var(--hairline); border-radius:4px; }
+  .col-body::-webkit-scrollbar-thumb:hover{ background:var(--paper-dim); }
+  .col-empty{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--paper-dim);
+    text-align:center;
+    padding:18px 6px;
+    opacity:0.7;
+  }
+
+  .card{
+    background:var(--panel-2);
+    border:1px solid var(--hairline);
+    border-radius:3px;
+    padding:11px 12px 12px;
+    position:relative;
+    cursor:grab;
+  }
+  .card:active{ cursor:grabbing; }
+  .card.dragging{ opacity:0.4; }
+  .card.drop-before{ box-shadow: inset 0 2px 0 0 var(--brass); }
+  .card.drop-after{ box-shadow: inset 0 -2px 0 0 var(--brass); }
+  .card::before{
+    content:"";
+    position:absolute;
+    top:9px;
+    left:9px;
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:var(--accent);
+  }
+  .card .company{
+    font-family:'Fraunces',serif;
+    font-size:15.5px;
+    font-weight:500;
+    margin:0 0 2px 16px;
+    line-height:1.3;
+  }
+  .posting-link{
+    display:block;
+    color:inherit;
+    text-decoration:none;
+    margin:0 0 8px 16px;
+    padding:7px 10px;
+    border:1px solid rgba(201,163,93,0.4);
+    border-radius:5px;
+    background:rgba(201,163,93,0.08);
+  }
+  .posting-link:hover{
+    border-color:var(--brass);
+    background:rgba(201,163,93,0.18);
+  }
+  .card .posting-link .company{ margin:0 0 2px 0; }
+  .card .posting-link .role{ margin:0; }
+  .posting-link-hint{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    margin-top:6px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--brass);
+  }
+  .card .role{
+    font-size:12.5px;
+    color:var(--paper-dim);
+    margin:0 0 8px 16px;
+  }
+  .card .meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-left:16px;
+  }
+  .tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    border:1px solid var(--hairline);
+    border-radius:2px;
+    padding:1px 6px;
+  }
+
+  .notes-wrap{
+    position:relative;
+    margin:8px 0 0 16px;
+    cursor:help;
+  }
+  .notes-preview{
+    font-size:12px;
+    color:var(--paper-dim);
+    line-height:1.4;
+    margin:0;
+  }
+  .card .notes{
+    font-size:12px;
+    color:var(--paper-dim);
+    margin:8px 0 0 16px;
+    line-height:1.4;
+  }
+  .notes-tooltip{
+    display:none;
+    position:fixed;
+    width:240px;
+    max-width:70vw;
+    background:var(--bg);
+    border:1px solid var(--brass-dim);
+    border-radius:4px;
+    padding:10px 12px;
+    font-size:12px;
+    line-height:1.45;
+    color:var(--paper);
+    box-shadow:0 6px 18px rgba(0,0,0,0.4);
+    z-index:1000;
+  }
+
+  .card-actions{
+    position:absolute;
+    top:8px;
+    right:8px;
+    display:flex;
+    gap:4px;
+  }
+  .icon-btn{
+    background:none;
+    border:none;
+    color:var(--paper-dim);
+    cursor:pointer;
+    font-size:13px;
+    padding:2px 4px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .icon-btn:hover{ color:var(--paper); }
+  .pull-btn{
+    display:block;
+    width:100%;
+    margin:10px 0 0 0;
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    color:var(--paper);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    padding:6px 8px;
+    border-radius:3px;
+    cursor:pointer;
+  }
+  .pull-btn:hover{ border-color:var(--brass); color:var(--brass); }
+
+  /* column accent colors */
+  .column[data-col="postings"]{ --accent: var(--postings); }
+  .column[data-col="hopper"]{ --accent: var(--hopper); }
+  .column[data-col="applied"]{ --accent: var(--applied); }
+  .column[data-col="interviewing"]{ --accent: var(--interviewing); }
+  .column[data-col="offer"]{ --accent: var(--offer); }
+  .column[data-col="closed"]{ --accent: var(--closed); }
+  .column[data-col="passed"]{ --accent: var(--passed); }
+  .column[data-col="discarded"]{ --accent: var(--discarded); }
+  .card[data-col="postings"]{
+    --accent: var(--postings);
+    background:
+      linear-gradient(rgba(184,160,214,0.08), rgba(184,160,214,0.08)),
+      var(--panel-2);
+    border-color:rgba(184,160,214,0.3);
+  }
+  .card[data-col="hopper"]{ --accent: var(--hopper); }
+  .card[data-col="applied"]{ --accent: var(--applied); }
+  .card[data-col="interviewing"]{ --accent: var(--interviewing); }
+  .card[data-col="offer"]{ --accent: var(--offer); }
+  .card[data-col="closed"]{ --accent: var(--closed); }
+  .card[data-col="passed"]{ --accent: var(--passed); }
+  .card[data-col="discarded"]{ --accent: var(--discarded); }
+
+  /* modal */
+  .overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.55);
+    align-items:center;
+    justify-content:center;
+    z-index:10;
+  }
+  .overlay.open{ display:flex; }
+  .modal{
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:6px;
+    width:420px;
+    max-width:92vw;
+    max-height:88vh;
+    overflow-y:auto;
+    padding:22px 24px 20px;
+  }
+  .modal h2{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:19px;
+    margin:0 0 16px;
+  }
+  .field{ margin-bottom:12px; }
+  .field label{
+    display:block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    margin-bottom:5px;
+  }
+  .field input, .field select, .field textarea{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--hairline);
+    border-radius:3px;
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;
+    padding:8px 10px;
+  }
+  .field textarea{ resize:vertical; min-height:56px; font-family:'Inter',sans-serif; }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    outline:none;
+    border-color:var(--brass-dim);
+  }
+  .row2{ display:flex; gap:10px; }
+  .row2 > .field{ flex:1; }
+  .modal-actions{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:18px;
+  }
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:500;
+    padding:8px 14px;
+    border-radius:3px;
+    cursor:pointer;
+    border:1px solid var(--hairline);
+    background:var(--panel-2);
+    color:var(--paper);
+  }
+  .btn:hover{ border-color:var(--paper-dim); }
+  .btn.primary{
+    background:var(--brass);
+    color:#1b1e24;
+    border-color:var(--brass);
+    font-weight:600;
+  }
+  .btn.primary:hover{ background:#dab472; }
+  .btn.danger{ color:#e0a292; }
+
+  @media (max-width: 1024px){
+    /* Covers iPad portrait/landscape. iOS Safari auto-zooms the whole page
+       when a focused input's font-size is under 16px — bump these up so
+       tapping a field doesn't yank the viewport around. */
+    .field input, .field select, .field textarea,
+    .controlbar input[type="text"], .controlbar select,
+    #searchInput{
+      font-size:16px;
+    }
+    /* Bigger touch targets — the desktop sizes assume a mouse pointer. */
+    .icon-btn{ padding:6px 8px; font-size:16px; }
+    .select-mark, .card-select{ width:18px; height:18px; }
+    .card.selectable{ padding-left:34px; }
+    .pull-btn{ padding:9px 8px; }
+    .add-btn, .btn{ padding:10px 16px; }
+  }
+
+  @media (max-width: 700px){
+    .board{ padding:16px; }
+    .topbar{ padding:20px 16px 14px; flex-direction:column; align-items:flex-start; gap:10px; }
+    .stats{ display:none; }
+    .user-picker{ margin-left:0; padding-left:0; border-left:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div style="display:flex; align-items:center;">
+    <div>
+      <h1>Job Search</h1>
+      <div class="sub">a working record of applications, in progress</div>
+    </div>
+    <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); display:none; font-size:16px; padding:14px 26px; font-weight:700; margin-left:18px;">⇄ Synchronize</button>
+    <span id="syncState" style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim); min-width:60px; margin-left:8px;"></span>
+  </div>
+  <div class="toprow">
+    <div class="stats" id="stats"></div>
+    <span id="saveState" style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim); min-width:70px;"></span>
+    <button class="add-btn" id="exportBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline);">Export</button>
+    <button class="add-btn" id="importBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline);">Import</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none;" />
+    <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:16px;">⚙</button>
+  </div>
+</div>
+
+<div class="controlbar">
+  <input type="text" id="searchInput" placeholder="Search role, company, location, notes…" />
+  <div style="display:flex; gap:0;">
+    <button class="add-btn entry-btn" id="openPaste">+ From Posting</button>
+    <button class="add-btn entry-btn" id="openAdd">+ Manual Entry</button>
+  </div>
+  <div class="user-picker">
+    <label>User</label>
+    <select id="userSelect"></select>
+    <button class="icon-btn" id="deleteUserBtn" title="Delete this user" style="font-size:15px;">🗑</button>
+  </div>
+  <label class="claimed-toggle-label" style="margin-left:6px;">
+    <input type="checkbox" class="claimed-toggle-cb" id="decayToggleCb" checked />
+    <span>Card aging</span>
+  </label>
+</div>
+<div class="filterbar" id="filterbar" style="display:none;"></div>
+<div class="bulkbar" id="bulkbar" style="display:none;"></div>
+<div class="board" id="board"></div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">New entry</h2>
+    <div class="field">
+      <label>Role</label>
+      <input id="f-role" placeholder="Senior Product Designer" />
+    </div>
+    <div class="field">
+      <label>Company</label>
+      <input id="f-company" placeholder="Acme Corp" />
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Location</label>
+        <input id="f-location" placeholder="Remote / Boston, MA" />
+      </div>
+      <div class="field">
+        <label>Salary</label>
+        <input id="f-salary" placeholder="$120k–140k" />
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Column</label>
+        <select id="f-column">
+          <option value="postings">Postings (shared)</option>
+          <option value="hopper">My Hopper</option>
+          <option value="applied">Applied</option>
+          <option value="interviewing">Interviewing</option>
+          <option value="offer">Offer</option>
+          <option value="closed">Rejected</option>
+          <option value="passed">Ghosted</option>
+          <option value="discarded">Discarded</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input id="f-date" type="date" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Posting link</label>
+      <input id="f-url" placeholder="https://..." />
+    </div>
+    <div class="field">
+      <label>Tags</label>
+      <input id="f-tags" placeholder="referral, dream job, remote" />
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <textarea id="f-notes" placeholder="Contact, referral, interview prep, etc."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn danger" id="deleteBtn" style="display:none;">Delete</button>
+      <div style="flex:1;"></div>
+      <button class="btn" id="cancelBtn">Cancel</button>
+      <button class="btn primary" id="saveBtn" style="margin-left:8px;">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="pasteOverlay">
+  <div class="modal">
+    <h2>Paste from posting</h2>
+    <p style="font-size:12.5px; color:var(--paper-dim); margin:-8px 0 14px; line-height:1.5;">
+      If you're running the local scrape helper, paste a link and fetch it directly. Otherwise, copy the listing text yourself below. Either way, this lands in the shared Postings column for everyone.
+    </p>
+    <div class="field">
+      <label>Fetch directly from a link (requires local helper running)</label>
+      <div style="display:flex; gap:8px;">
+        <input id="p-fetch-url" placeholder="https://builtin.com/job/..." style="flex:1;" />
+        <button class="btn primary" id="fetchUrlBtn" style="white-space:nowrap;">Fetch</button>
+      </div>
+      <p id="fetchStatus" style="font-size:11.5px; color:var(--paper-dim); margin:6px 0 0; font-family:'IBM Plex Mono',monospace;"></p>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px; margin:16px 0; color:var(--paper-dim); font-family:'IBM Plex Mono',monospace; font-size:11px;">
+      <div style="flex:1; height:1px; background:var(--hairline);"></div>
+      <span>or paste manually</span>
+      <div style="flex:1; height:1px; background:var(--hairline);"></div>
+    </div>
+    <div class="field">
+      <label>Posting link (optional)</label>
+      <input id="p-url" placeholder="https://builtin.com/job/..." />
+    </div>
+    <div class="field">
+      <label>Pasted text</label>
+      <textarea id="p-text" style="min-height:140px;" placeholder="Senior Product Designer&#10;Acme Corp&#10;Boston, MA · Remote&#10;$120,000 - $150,000&#10;..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <div style="flex:1;"></div>
+      <button class="btn" id="pasteCancelBtn">Cancel</button>
+      <button class="btn primary" id="pasteParseBtn" style="margin-left:8px;">Parse &amp; review</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dialogOverlay">
+  <div class="modal" style="width:360px;">
+    <p id="dialogMessage" style="font-size:13.5px; color:var(--paper); white-space:pre-line; margin:0 0 14px; line-height:1.5;"></p>
+    <div class="field" id="dialogInputField" style="display:none;">
+      <input id="dialogInput" />
+    </div>
+    <div class="modal-actions">
+      <div style="flex:1;"></div>
+      <button class="btn" id="dialogCancelBtn">Cancel</button>
+      <button class="btn primary" id="dialogOkBtn" style="margin-left:8px;">OK</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="settingsOverlay">
+  <div class="modal" style="width:420px;">
+    <h2>Sync settings</h2>
+    <p style="font-size:12.5px; color:var(--paper-dim); margin:-8px 0 14px; line-height:1.5;">
+      Point this board at a shared Google Sheet backend to sync Postings and Users with everyone else using the same Sheet. Leave blank to keep this board local-only, same as before. These settings live only in this browser — they aren't themselves synced.
+    </p>
+    <div class="field">
+      <label>Sync URL (Apps Script Web App URL)</label>
+      <input id="s-sync-url" placeholder="https://script.google.com/macros/s/.../exec" />
+    </div>
+    <div class="field">
+      <label>Sync key (shared secret)</label>
+      <input id="s-sync-key" placeholder="whatever you set as SECRET in the script" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn danger" id="settingsClearBtn">Clear / go local-only</button>
+      <div style="flex:1;"></div>
+      <button class="btn" id="settingsCancelBtn">Cancel</button>
+      <button class="btn primary" id="settingsSaveBtn" style="margin-left:8px;">Save &amp; sync now</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="welcomeOverlay">
+  <div class="modal" style="width:440px;">
+    <h2>Welcome to Job Search</h2>
+    <p style="font-size:12.5px; color:var(--paper-dim); margin:-8px 0 14px; line-height:1.5;">
+      What should we call you? You can add more people later from the user picker.
+    </p>
+    <div class="field">
+      <label>Your name</label>
+      <input id="w-name" placeholder="Derek" />
+    </div>
+    <div id="w-sync-section">
+      <div style="display:flex; align-items:center; gap:10px; margin:18px 0 12px; color:var(--paper-dim); font-family:'IBM Plex Mono',monospace; font-size:11px;">
+        <div style="flex:1; height:1px; background:var(--hairline);"></div>
+        <span>optional — connect to a shared sheet</span>
+        <div style="flex:1; height:1px; background:var(--hairline);"></div>
+      </div>
+      <p style="font-size:12.5px; color:var(--paper-dim); margin:0 0 12px; line-height:1.5;">
+        If your group already has a shared Google Sheet set up, enter its details now. Otherwise leave these blank — you can connect later from the ⚙ settings button, and the board works fine local-only until then.
+      </p>
+      <div class="field">
+        <label>Sync URL (Apps Script Web App URL)</label>
+        <input id="w-sync-url" placeholder="https://script.google.com/macros/s/.../exec" />
+      </div>
+      <div class="field">
+        <label>Sync key (shared secret)</label>
+        <input id="w-sync-key" placeholder="whatever you set as SECRET in the script" />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <div style="flex:1;"></div>
+      <button class="btn primary" id="welcomeSubmitBtn">Get started</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLUMNS = [
+  {key:'postings', label:'Postings', shared:true},
+  {key:'hopper', label:'My Hopper'},
+  {key:'applied', label:'Applied'},
+  {key:'interviewing', label:'Interviewing'},
+  {key:'offer', label:'Offer'},
+  {key:'closed', label:'Rejected'},
+  {key:'passed', label:'Ghosted'},
+  {key:'discarded', label:'Discarded'}
+];
+const STORAGE_KEY = 'job-tracker-cards';
+const USERS_KEY = 'job-tracker-users';
+const CURRENT_USER_KEY = 'job-tracker-current-user';
+const SYNC_URL_KEY = 'job-tracker-sync-url';
+const SYNC_SECRET_KEY = 'job-tracker-sync-secret';
+
+let cards = [];
+let users = [];
+let currentUser = null;
+let editingId = null;
+let activeTagFilters = [];
+let searchQuery = '';
+let columnSortMode = {};
+COLUMNS.forEach(c=> columnSortMode[c.key] = 'updated-desc');
+let selectedIds = new Set();
+let hideClaimedPostings = true;
+let decayEnabled = true;
+let syncUrl = null;
+let syncSecret = null;
+
+// Cards are soft-deleted (tombstoned), not removed outright — this is what
+// lets a deletion actually propagate to other instances on Synchronize.
+// Anywhere the board displays or reasons about "what exists", use this.
+function liveCards(){
+  return cards.filter(c=>!c.deleted);
+}
+
+function allTags(){
+  const set = new Set();
+  liveCards().forEach(c=> (c.tags||[]).forEach(t=> set.add(t)));
+  return Array.from(set).sort((a,b)=>a.localeCompare(b));
+}
+
+function renderFilterbar(){
+  const bar = document.getElementById('filterbar');
+  const tags = allTags();
+  if(tags.length === 0){
+    bar.style.display = 'none';
+    bar.innerHTML = '';
+    return;
+  }
+  bar.style.display = 'flex';
+  bar.innerHTML = `<span class="flabel">Filter by tag</span>` +
+    tags.map(t=>`<button class="ftag${activeTagFilters.includes(t)?' active':''}" data-tag="${escapeAttr(t)}">${escapeHtml(t)}</button>`).join('') +
+    (activeTagFilters.length ? `<button class="ftag clear" id="clearFilters">Clear</button>` : '');
+
+  bar.querySelectorAll('.ftag[data-tag]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const tag = btn.dataset.tag;
+      if(activeTagFilters.includes(tag)){
+        activeTagFilters = activeTagFilters.filter(t=>t!==tag);
+      }else{
+        activeTagFilters.push(tag);
+      }
+      render();
+    });
+  });
+  const clearBtn = document.getElementById('clearFilters');
+  if(clearBtn){
+    clearBtn.addEventListener('click', ()=>{
+      activeTagFilters = [];
+      render();
+    });
+  }
+}
+
+const hasClaudeStorage = typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function';
+
+const store = {
+  async get(key){
+    if(hasClaudeStorage){
+      return window.storage.get(key);
+    }
+    const raw = window.localStorage.getItem(key);
+    if(raw === null) return null;
+    return { key, value: raw };
+  },
+  async set(key, value){
+    if(hasClaudeStorage){
+      return window.storage.set(key, value);
+    }
+    window.localStorage.setItem(key, value);
+    return { key, value };
+  }
+};
+
+function uid(){ return 'c' + Math.random().toString(36).slice(2,10); }
+
+// Remote sync — talks to a Google Apps Script Web App backed by a Google Sheet.
+// Purely optional: if no syncUrl is configured, everything behaves exactly
+// as it did with only local storage. Note: Apps Script Web Apps trigger a
+// CORS preflight if the request declares Content-Type: application/json, and
+// don't handle that preflight cleanly — so POST bodies are sent with the
+// browser's default text/plain content type. Apps Script's e.postData.contents
+// still gives the raw JSON string regardless of the declared MIME type.
+async function remoteFetchAll(){
+  if(!syncUrl) return null;
+  try{
+    const resp = await fetch(`${syncUrl}?key=${encodeURIComponent(syncSecret || '')}`);
+    const data = await resp.json();
+    if(data.error) throw new Error(data.error);
+    if(!Array.isArray(data.cards) || !Array.isArray(data.users)) throw new Error('unexpected response shape');
+    return data;
+  }catch(e){
+    console.error('remote fetch failed', e);
+    return null;
+  }
+}
+
+async function remotePushAll(cardsArr, usersArr){
+  if(!syncUrl) return true; // no-op success when sync isn't configured
+  try{
+    const resp = await fetch(syncUrl, {
+      method: 'POST',
+      body: JSON.stringify({ key: syncSecret || '', cards: cardsArr, users: usersArr })
+    });
+    const data = await resp.json();
+    if(data.error) throw new Error(data.error);
+    return true;
+  }catch(e){
+    console.error('remote push failed', e);
+    return false;
+  }
+}
+
+function setSyncIndicator(state){
+  // state: 'synced' | 'failed' | 'off' | 'syncing'
+  const el = document.getElementById('syncState');
+  if(!el) return;
+  if(state === 'off'){
+    el.textContent = '';
+    return;
+  }
+  if(state === 'syncing'){
+    el.textContent = 'syncing…';
+    el.style.color = 'var(--paper-dim)';
+    return;
+  }
+  el.textContent = state === 'synced' ? 'synced' : 'sync failed';
+  el.style.color = state === 'synced' ? 'var(--paper-dim)' : '#e0a292';
+  if(state === 'synced'){
+    clearTimeout(setSyncIndicator._t);
+    setSyncIndicator._t = setTimeout(()=>{ el.textContent = ''; }, 1600);
+  }
+}
+
+let hasUnsyncedChanges = false;
+
+// Normalize a posting to a dedup key: same link (ignoring query string/case),
+// or same company+role if there's no link, are treated as "the same posting".
+// Params known to be tracking/session noise rather than part of a
+// listing's real identity — safe to ignore when comparing two links.
+// Notably absent: Indeed's "jk" param, which IS the actual job ID for
+// indeed.com/viewjob links (everything else on that URL is tracking).
+const URL_TRACKING_PARAMS = new Set([
+  'utm_source','utm_medium','utm_campaign','utm_term','utm_content',
+  'ref','referrer','referer','source','from','fbclid','gclid','msclkid',
+  'mc_cid','mc_eid','si','igshid',
+  'tk','vjs' // indeed-specific session/tracking params
+]);
+
+function postingDedupeKey(card){
+  if(card.url){
+    try{
+      const u = new URL(card.url);
+      const keptParams = [];
+      u.searchParams.forEach((value, key)=>{
+        if(!URL_TRACKING_PARAMS.has(key.toLowerCase())){
+          keptParams.push(`${key.toLowerCase()}=${value}`);
+        }
+      });
+      keptParams.sort();
+      const path = (u.hostname + u.pathname).toLowerCase().replace(/\/$/, '');
+      return 'u:' + path + (keptParams.length ? '?' + keptParams.join('&') : '');
+    }catch(e){ /* fall through to company+role key */ }
+  }
+  return 'cr:' + (card.company||'').trim().toLowerCase() + '|' + (card.role||'').trim().toLowerCase();
+}
+
+// Basic dedup pass: only applies to shared Postings (owner === null). Personal
+// cards are never deduped against each other — two people can each have their
+// own copy of the same job in their own Hopper, that's not a duplicate.
+function dedupePostings(cardsArr){
+  const groups = new Map();
+  const rest = [];
+  cardsArr.forEach(c=>{
+    if(!c.deleted && c.column === 'postings' && (c.owner === null || c.owner === undefined)){
+      const key = postingDedupeKey(c);
+      if(!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(c);
+    }else{
+      rest.push(c); // tombstones and non-postings cards pass through untouched
+    }
+  });
+  const deduped = [];
+  groups.forEach(group=>{
+    if(group.length === 1){
+      deduped.push(group[0]);
+      return;
+    }
+    // Keep the earliest-added as canonical; merge every duplicate's tags into it.
+    group.sort((a,b)=> (a.updatedAt||0) - (b.updatedAt||0));
+    const keeper = { ...group[0] };
+    const mergedTags = new Set(keeper.tags || []);
+    group.slice(1).forEach(dup=> (dup.tags||[]).forEach(t=> mergedTags.add(t)));
+    keeper.tags = Array.from(mergedTags);
+    deduped.push(keeper);
+  });
+  return [...rest, ...deduped];
+}
+
+// Once a tombstone is this old, assume every instance has synced and seen
+// the deletion, and permanently drop the row so the sheet doesn't grow
+// forever with dead entries.
+const TOMBSTONE_GC_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+// Cards visually "decay" (fade + desaturate) the longer they sit without an
+// update — a passive staleness signal instead of an automatic column move.
+// Only applies to "waiting on something" columns; resolved outcomes
+// (Offer/Rejected) don't decay, since fading conveys nothing useful once
+// the outcome is already known. Claimed postings skip it too, so this
+// doesn't fight with the existing claimed-card dimming.
+const DECAY_ELIGIBLE_COLUMNS = new Set(['postings','hopper','applied','interviewing']);
+const DECAY_FULL_DAYS = 30; // fully "decayed" look by this many days untouched
+
+// Ghosted and Discarded are always shown fully decayed, regardless of age —
+// these columns represent "this is dead" as a category, not a gradient.
+const FULLY_DECAYED_COLUMNS = new Set(['passed','discarded']);
+
+function decayStyleFor(card, col, isClaimed){
+  if(isClaimed) return null;
+  if(FULLY_DECAYED_COLUMNS.has(col.key)){
+    return { style: `opacity:0.45; filter:grayscale(75%);`, days: null };
+  }
+  if(!DECAY_ELIGIBLE_COLUMNS.has(col.key)) return null;
+  if(card.updatedAt === undefined || card.updatedAt === null) return null;
+  const days = (Date.now() - card.updatedAt) / (24*60*60*1000);
+  if(days <= 0) return null;
+  const factor = Math.min(1, days / DECAY_FULL_DAYS);
+  const opacity = (1 - factor*0.55).toFixed(2);
+  const grayscalePct = Math.round(factor*75);
+  return {
+    style: `opacity:${opacity}; filter:grayscale(${grayscalePct}%);`,
+    days: Math.floor(days)
+  };
+}
+
+// Merge remote + local by id, last-write-wins per card using updatedAt
+// (a newer tombstone beats an older live edit, and vice versa — deletion
+// is just another update, not a special case), then dedupe the shared
+// Postings pool and garbage-collect old tombstones. Users lists are unioned.
+function mergeCardsAndUsers(remoteCards, remoteUsers){
+  const byId = new Map();
+  cards.forEach(c=> byId.set(c.id, c));
+  remoteCards.forEach(rc=>{
+    const local = byId.get(rc.id);
+    if(!local){
+      byId.set(rc.id, rc);
+    }else{
+      const localTime = local.updatedAt || 0;
+      const remoteTime = rc.updatedAt || 0;
+      if(remoteTime > localTime) byId.set(rc.id, rc);
+      // else keep local (it's newer or equally-old-but-already-ours)
+    }
+  });
+  let mergedCards = dedupePostings(Array.from(byId.values()));
+  mergedCards = mergedCards.filter(c=>
+    !(c.deleted && (Date.now() - (c.updatedAt || 0)) > TOMBSTONE_GC_MS)
+  );
+  const mergedUsers = Array.from(new Set([...users, ...remoteUsers]));
+  return { cards: mergedCards, users: mergedUsers };
+}
+
+// In-app replacements for window.prompt/confirm/alert — native browser dialogs
+// are commonly blocked inside sandboxed iframes (like Claude's HTML preview),
+// where they silently do nothing rather than erroring, so relying on them
+// leaves the app looking broken with zero feedback. These work everywhere.
+let dialogResolve = null;
+
+function openDialogInternal({message, showInput, showCancel, defaultValue = ''}){
+  return new Promise(resolve=>{
+    dialogResolve = resolve;
+    document.getElementById('dialogMessage').textContent = message || '';
+    const inputField = document.getElementById('dialogInputField');
+    const input = document.getElementById('dialogInput');
+    if(showInput){
+      inputField.style.display = 'block';
+      input.value = defaultValue;
+      setTimeout(()=> input.focus(), 30);
+    }else{
+      inputField.style.display = 'none';
+    }
+    document.getElementById('dialogCancelBtn').style.display = showCancel ? 'inline-block' : 'none';
+    document.getElementById('dialogOverlay').classList.add('open');
+  });
+}
+
+function resolveDialog(result){
+  document.getElementById('dialogOverlay').classList.remove('open');
+  if(dialogResolve){
+    const r = dialogResolve;
+    dialogResolve = null;
+    r(result);
+  }
+}
+
+document.getElementById('dialogOkBtn').addEventListener('click', ()=>{
+  const showingInput = document.getElementById('dialogInputField').style.display === 'block';
+  resolveDialog(showingInput ? document.getElementById('dialogInput').value : true);
+});
+document.getElementById('dialogCancelBtn').addEventListener('click', ()=>{
+  const showingInput = document.getElementById('dialogInputField').style.display === 'block';
+  resolveDialog(showingInput ? null : false);
+});
+document.getElementById('dialogInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    document.getElementById('dialogOkBtn').click();
+  }
+});
+
+function askPrompt(message, defaultValue = ''){
+  return openDialogInternal({message, showInput:true, showCancel:true, defaultValue});
+}
+async function askConfirm(message){
+  return (await openDialogInternal({message, showInput:false, showCancel:true})) === true;
+}
+async function showAlertModal(message){
+  await openDialogInternal({message, showInput:false, showCancel:false});
+}
+
+// Combined first-run modal: collects a name (required), and optionally sync
+// details if sync isn't already configured on this device. Resolves with
+// {name, syncUrl, syncKey} once the person submits — a name is required,
+// so this only resolves on genuine submission, never cancels.
+function showWelcomeOverlay(syncAlreadyConfigured){
+  return new Promise(resolve=>{
+    document.getElementById('w-name').value = '';
+    document.getElementById('w-sync-url').value = '';
+    document.getElementById('w-sync-key').value = '';
+    document.getElementById('w-sync-section').style.display = syncAlreadyConfigured ? 'none' : 'block';
+    document.getElementById('welcomeOverlay').classList.add('open');
+
+    const submitBtn = document.getElementById('welcomeSubmitBtn');
+    const nameInput = document.getElementById('w-name');
+
+    const submit = async ()=>{
+      const name = nameInput.value.trim();
+      if(!name){
+        await showAlertModal('Please enter a name to continue.');
+        return;
+      }
+      const syncUrlVal = document.getElementById('w-sync-url').value.trim();
+      const syncKeyVal = document.getElementById('w-sync-key').value.trim();
+      document.getElementById('welcomeOverlay').classList.remove('open');
+      submitBtn.removeEventListener('click', submit);
+      nameInput.removeEventListener('keydown', onKeydown);
+      resolve({ name, syncUrl: syncUrlVal, syncKey: syncKeyVal });
+    };
+    const onKeydown = (e)=>{
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        submit();
+      }
+    };
+
+    submitBtn.addEventListener('click', submit);
+    nameInput.addEventListener('keydown', onKeydown);
+    setTimeout(()=> nameInput.focus(), 30);
+  });
+}
+
+// Derive a "from:<source>" tag from a URL's domain, e.g. builtin.com -> from:builtin
+function sourceTagFromUrl(url){
+  if(!url) return null;
+  try{
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    const parts = host.split('.').filter(Boolean);
+    if(parts.length === 0) return null;
+    const name = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+    if(!name) return null;
+    return `from:${name.toLowerCase()}`;
+  }catch(e){
+    return null;
+  }
+}
+
+async function load(){
+  try{
+    const res = await store.get(STORAGE_KEY);
+    cards = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){
+    cards = [];
+  }
+
+  try{
+    const res = await store.get(USERS_KEY);
+    users = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){
+    users = [];
+  }
+
+  try{
+    const res = await store.get(CURRENT_USER_KEY);
+    currentUser = res && res.value ? res.value : null;
+  }catch(e){
+    currentUser = null;
+  }
+
+  // Sync config is always local-only (per-browser setting), never itself synced.
+  try{
+    const res = await store.get(SYNC_URL_KEY);
+    syncUrl = res && res.value ? res.value : null;
+  }catch(e){ syncUrl = null; }
+  try{
+    const res = await store.get(SYNC_SECRET_KEY);
+    syncSecret = res && res.value ? res.value : null;
+  }catch(e){ syncSecret = null; }
+
+  if(syncUrl){
+    const remote = await remoteFetchAll();
+    if(remote){
+      const merged = mergeCardsAndUsers(remote.cards, remote.users);
+      cards = merged.cards;
+      users = merged.users;
+      setSyncIndicator('synced');
+      // Push straight back in case the merge pulled in changes remote didn't have yet.
+      await remotePushAll(cards, users);
+    }else{
+      setSyncIndicator('failed');
+      // fall through and use the local cached copy loaded above
+    }
+  }
+
+  if(users.length === 0){
+    const result = await showWelcomeOverlay(!!syncUrl);
+    if(result && result.name){
+      users = [result.name];
+      currentUser = result.name;
+      await saveUsers();
+      await saveCurrentUser();
+
+      // Only offered when sync wasn't already configured on this device.
+      if(!syncUrl && result.syncUrl && result.syncKey){
+        syncUrl = result.syncUrl;
+        syncSecret = result.syncKey;
+        await store.set(SYNC_URL_KEY, syncUrl);
+        await store.set(SYNC_SECRET_KEY, syncSecret);
+
+        const remote = await remoteFetchAll();
+        if(remote){
+          const merged = mergeCardsAndUsers(remote.cards, remote.users);
+          cards = merged.cards;
+          users = merged.users;
+          setSyncIndicator('synced');
+          await remotePushAll(cards, users);
+        }else{
+          setSyncIndicator('failed');
+          await showAlertModal("Couldn't reach that Sync URL, or the key was rejected — you can try again anytime from the ⚙ settings button. Continuing local-only for now.");
+        }
+      }
+    }
+  }else if(!currentUser || !users.includes(currentUser)){
+    currentUser = users[0];
+    await saveCurrentUser();
+  }
+
+  // Migrate older single-user data: 'wishlist' column renamed to 'hopper'.
+  // Cards with no owner field at all predate multi-user support entirely —
+  // those belonged to a single implicit user, so assign them to whoever
+  // just got set up above, rather than marking them shared (null).
+  cards.forEach(c=>{
+    if(c.column === 'wishlist') c.column = 'hopper';
+    if(c.owner === undefined) c.owner = currentUser || null;
+    if(!c.tags) c.tags = [];
+    if(c.updatedAt === undefined) c.updatedAt = 0;
+    if(c.deleted === undefined) c.deleted = false;
+  });
+  await save();
+
+  hasUnsyncedChanges = false;
+  updateSyncUI();
+  renderUserSelect();
+  render();
+}
+
+async function save(){
+  try{
+    const result = await store.set(STORAGE_KEY, JSON.stringify(cards));
+    setSavedIndicator(!!result);
+  }catch(e){
+    console.error('storage failed', e);
+    setSavedIndicator(false);
+  }
+  if(syncUrl){
+    hasUnsyncedChanges = true;
+    updateSyncUI();
+  }
+}
+
+async function saveUsers(){
+  try{
+    const result = await store.set(USERS_KEY, JSON.stringify(users));
+    if(!result) setSavedIndicator(false);
+  }catch(e){
+    console.error('storage failed', e);
+    setSavedIndicator(false);
+  }
+  if(syncUrl){
+    hasUnsyncedChanges = true;
+    updateSyncUI();
+  }
+  if(syncUrl){
+    const ok = await remotePushAll(cards, users);
+    setSyncIndicator(ok ? 'synced' : 'failed');
+  }
+}
+
+async function saveCurrentUser(){
+  try{
+    const result = await store.set(CURRENT_USER_KEY, currentUser || '');
+    if(!result) setSavedIndicator(false);
+  }catch(e){
+    console.error('storage failed', e);
+    setSavedIndicator(false);
+  }
+}
+
+function renderUserSelect(){
+  const sel = document.getElementById('userSelect');
+  sel.innerHTML = users.map(u=>`<option value="${escapeAttr(u)}">${escapeHtml(u)}</option>`).join('')
+    + `<option value="__add__">+ Add person…</option>`;
+  sel.value = currentUser || (users[0] || '');
+}
+
+document.getElementById('userSelect').addEventListener('change', async (e)=>{
+  if(e.target.value === '__add__'){
+    const name = ((await askPrompt('Name of the new person:')) || '').trim();
+    if(name && !users.includes(name)){
+      users.push(name);
+      await saveUsers();
+    }
+    if(name){
+      currentUser = name;
+      await saveCurrentUser();
+    }
+    renderUserSelect();
+    render();
+    return;
+  }
+  currentUser = e.target.value;
+  await saveCurrentUser();
+  selectedIds.clear();
+  render();
+});
+
+document.getElementById('deleteUserBtn').addEventListener('click', async ()=>{
+  if(!currentUser){
+    await showAlertModal('No user selected.');
+    return;
+  }
+  const name = currentUser;
+  const ownedCount = liveCards().filter(c=>c.owner===name).length;
+  const warn = ownedCount > 0
+    ? `Permanently delete "${name}"?\n\nThis will also permanently delete their ${ownedCount} personal card${ownedCount===1?'':'s'} (Hopper/Applied/etc.). This cannot be undone.`
+    : `Permanently delete "${name}"?`;
+  if(!(await askConfirm(warn))) return;
+
+  cards.forEach(c=>{
+    if(c.owner===name){
+      c.deleted = true;
+      c.updatedAt = Date.now();
+    }
+  });
+  selectedIds.clear();
+  await save();
+
+  users = users.filter(u=>u!==name);
+  await saveUsers();
+
+  if(users.length === 0){
+    const newName = ((await askPrompt('That was the last person on the board. Add someone to continue:')) || '').trim();
+    if(newName){
+      users = [newName];
+      currentUser = newName;
+      await saveUsers();
+    }else{
+      currentUser = null;
+    }
+  }else{
+    currentUser = users[0];
+  }
+  await saveCurrentUser();
+  renderUserSelect();
+  render();
+});
+
+function setSavedIndicator(ok){
+  const el = document.getElementById('saveState');
+  if(!el) return;
+  el.textContent = ok ? 'saved' : 'save failed';
+  el.style.color = ok ? 'var(--paper-dim)' : '#e0a292';
+  if(ok){
+    clearTimeout(setSavedIndicator._t);
+    setSavedIndicator._t = setTimeout(()=>{ el.textContent=''; }, 1600);
+  }
+}
+
+function fmtDate(d){
+  if(!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  if(isNaN(dt)) return d;
+  return dt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+}
+
+function sortCards(list, mode){
+  const arr = list.slice();
+  switch(mode){
+    case 'updated-desc':
+      arr.sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
+      break;
+    case 'updated-asc':
+      arr.sort((a,b)=> (a.updatedAt||0) - (b.updatedAt||0));
+      break;
+    case 'date-desc':
+      arr.sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+      break;
+    case 'date-asc':
+      arr.sort((a,b)=> (a.date||'').localeCompare(b.date||''));
+      break;
+    case 'company-asc':
+      arr.sort((a,b)=> (a.company||'').toLowerCase().localeCompare((b.company||'').toLowerCase()));
+      break;
+    case 'role-asc':
+      arr.sort((a,b)=> (a.role||'').toLowerCase().localeCompare((b.role||'').toLowerCase()));
+      break;
+    default:
+      break; // manual: preserve existing array order
+  }
+  return arr;
+}
+
+function renderNotesBlock(notes){
+  const limit = 70;
+  if(notes.length <= limit){
+    return `<p class="notes">${escapeHtml(notes)}</p>`;
+  }
+  const preview = escapeHtml(notes.slice(0, limit).trim()) + '…';
+  return `<div class="notes-wrap" tabindex="0">
+    <p class="notes-preview">${preview}</p>
+    <div class="notes-tooltip">${escapeHtml(notes)}</div>
+  </div>`;
+}
+
+function render(){
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  const statsEl = document.getElementById('stats');
+
+  renderFilterbar();
+  let visibleCards = activeTagFilters.length
+    ? liveCards().filter(c=> (c.tags||[]).some(t=> activeTagFilters.includes(t)))
+    : liveCards();
+
+  if(searchQuery.trim()){
+    const q = searchQuery.trim().toLowerCase();
+    visibleCards = visibleCards.filter(c=>{
+      const hay = [c.role, c.company, c.location, c.notes, ...(c.tags||[])].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  const claimedSourceIds = new Set(
+    liveCards().filter(c=> c.owner===currentUser && c.sourceId).map(c=>c.sourceId)
+  );
+
+  function poolFor(col){
+    if(col.shared){
+      return visibleCards.filter(c=>{
+        if(c.column !== col.key) return false;
+        if(claimedSourceIds.has(c.id) && hideClaimedPostings) return false;
+        return true;
+      });
+    }
+    return visibleCards.filter(c=>c.column===col.key && c.owner===currentUser);
+  }
+
+  statsEl.innerHTML = COLUMNS.map(c=>{
+    const n = poolFor(c).length;
+    return `<span><b>${n}</b> ${c.label.toLowerCase()}</span>`;
+  }).join('');
+
+  COLUMNS.forEach(col=>{
+    let colCards = poolFor(col);
+    colCards = sortCards(colCards, columnSortMode[col.key]);
+    const colEl = document.createElement('div');
+    colEl.className = 'column' + (col.shared ? ' shared' : '');
+    colEl.dataset.col = col.key;
+    colEl.innerHTML = `
+      <div class="col-tab">
+        <span class="name">${col.label}${col.shared ? '<span class="shared-mark">shared</span>' : ''}</span>
+        <span class="count">${colCards.length}</span>
+      </div>
+      <div class="col-subbar">
+        <select class="col-sort-select" data-col="${col.key}">
+          <option value="updated-desc"${columnSortMode[col.key]==='updated-desc'?' selected':''}>Sort: last updated</option>
+          <option value="manual"${columnSortMode[col.key]==='manual'?' selected':''}>Sort: manual</option>
+          <option value="date-desc"${columnSortMode[col.key]==='date-desc'?' selected':''}>Sort: date (newest)</option>
+          <option value="date-asc"${columnSortMode[col.key]==='date-asc'?' selected':''}>Sort: date (oldest)</option>
+          <option value="company-asc"${columnSortMode[col.key]==='company-asc'?' selected':''}>Sort: company A–Z</option>
+          <option value="role-asc"${columnSortMode[col.key]==='role-asc'?' selected':''}>Sort: role A–Z</option>
+        </select>
+        ${col.shared ? `
+        <label class="claimed-toggle-label">
+          <input type="checkbox" class="claimed-toggle-cb" id="claimedToggleCb" ${hideClaimedPostings ? 'checked' : ''} />
+          <span>Hide claimed</span>
+        </label>` : ''}
+      </div>
+      <div class="col-body" data-col="${col.key}"></div>
+    `;
+    board.appendChild(colEl);
+    const body = colEl.querySelector('.col-body');
+    colEl.querySelector('.col-sort-select').addEventListener('change', (e)=>{
+      columnSortMode[col.key] = e.target.value;
+      render();
+    });
+    if(col.shared){
+      colEl.querySelector('#claimedToggleCb').addEventListener('change', (e)=>{
+        hideClaimedPostings = e.target.checked;
+        render();
+      });
+    }
+
+    if(colCards.length === 0){
+      const filtered = activeTagFilters.length > 0 || searchQuery.trim().length > 0;
+      body.innerHTML = `<div class="col-empty">${filtered ? 'no matches here' : 'nothing filed here yet'}</div>`;
+    }
+
+    colCards.forEach(card=>{
+      const cardEl = document.createElement('div');
+      cardEl.className = 'card';
+      cardEl.dataset.col = col.key;
+      cardEl.draggable = true;
+      cardEl.dataset.id = card.id;
+      const tags = [];
+      if(card.location) tags.push(`<span class="tag">${escapeHtml(card.location)}</span>`);
+      if(card.salary) tags.push(`<span class="tag">${escapeHtml(card.salary)}</span>`);
+      if(card.date) tags.push(`<span class="tag">${fmtDate(card.date)}</span>`);
+      const userTags = (card.tags || []).map(t=>{
+        const isSrc = t.startsWith('from:');
+        return `<span class="utag${isSrc ? ' src' : ''}">${escapeHtml(t)}</span>`;
+      }).join('');
+      const selectable = col.key === 'hopper';
+      if(selectable) cardEl.classList.add('selectable');
+      if(selectable && selectedIds.has(card.id)) cardEl.classList.add('selected');
+      const isClaimed = col.shared && claimedSourceIds.has(card.id);
+      if(isClaimed) cardEl.classList.add('claimed');
+      const decay = decayEnabled ? decayStyleFor(card, col, isClaimed) : null;
+      if(decay){
+        cardEl.style.cssText += decay.style;
+        cardEl.title = decay.days !== null
+          ? `Last updated ${decay.days} day${decay.days===1?'':'s'} ago`
+          : (col.key === 'passed' ? 'Ghosted' : 'Discarded');
+      }
+      cardEl.innerHTML = `
+        ${selectable ? `<span class="select-mark">${selectedIds.has(card.id) ? '✓' : ''}</span>` : ''}
+        <div class="card-actions">
+          <button class="icon-btn edit-btn" title="Edit">✎</button>
+        </div>
+        ${card.url ? `
+        <a href="${escapeAttr(card.url)}" target="_blank" class="posting-link">
+          <p class="company">${escapeHtml(card.company || 'Unknown company')}</p>
+          <p class="role">${escapeHtml(card.role || '')}</p>
+          <span class="posting-link-hint">↗ View posting</span>
+        </a>` : `
+        <p class="company">${escapeHtml(card.company || 'Unknown company')}</p>
+        <p class="role">${escapeHtml(card.role || '')}</p>`}
+        <div class="meta">${tags.join('')}</div>
+        ${userTags ? `<div class="utags">${userTags}</div>` : ''}
+        ${card.notes ? renderNotesBlock(card.notes) : ''}
+        ${isClaimed ? `<span class="claimed-badge">Already in your Hopper</span>` : ''}
+        ${col.shared && !isClaimed ? `<button class="pull-btn" data-pull="${card.id}">Pull to my Hopper</button>` : ''}
+      `;
+      if(selectable){
+        cardEl.addEventListener('click', (e)=>{
+          if(e.target.closest('a')) return;
+          const nowSelected = selectedIds.has(card.id);
+          if(nowSelected){
+            selectedIds.delete(card.id);
+          }else{
+            selectedIds.add(card.id);
+          }
+          cardEl.classList.toggle('selected', !nowSelected);
+          const mark = cardEl.querySelector('.select-mark');
+          if(mark) mark.textContent = !nowSelected ? '✓' : '';
+          renderBulkBar();
+        });
+      }
+      cardEl.querySelector('.edit-btn').addEventListener('click', (e)=>{
+        e.stopPropagation();
+        openModal(card);
+      });
+      const pullBtn = cardEl.querySelector('[data-pull]');
+      if(pullBtn){
+        pullBtn.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          pullToHopper(card.id);
+        });
+      }
+      const notesWrap = cardEl.querySelector('.notes-wrap');
+      if(notesWrap){
+        const tooltip = notesWrap.querySelector('.notes-tooltip');
+        const showTip = ()=>{
+          tooltip.style.display = 'block';
+          const rect = notesWrap.getBoundingClientRect();
+          let left = rect.left;
+          let top = rect.bottom + 6;
+          tooltip.style.left = left + 'px';
+          tooltip.style.top = top + 'px';
+          const tipRect = tooltip.getBoundingClientRect();
+          if(tipRect.right > window.innerWidth - 8){
+            left = Math.max(8, window.innerWidth - tipRect.width - 8);
+            tooltip.style.left = left + 'px';
+          }
+          if(tipRect.bottom > window.innerHeight - 8){
+            top = rect.top - tipRect.height - 6;
+            tooltip.style.top = Math.max(8, top) + 'px';
+          }
+        };
+        const hideTip = ()=>{
+          if(!notesWrap.classList.contains('tt-open')) tooltip.style.display = 'none';
+        };
+        notesWrap.addEventListener('mouseenter', showTip);
+        notesWrap.addEventListener('mouseleave', hideTip);
+        notesWrap.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          const nowOpen = notesWrap.classList.toggle('tt-open');
+          if(nowOpen) showTip(); else tooltip.style.display = 'none';
+        });
+      }
+      cardEl.addEventListener('dragstart', (e)=>{
+        cardEl.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', card.id);
+      });
+      cardEl.addEventListener('dragend', ()=>{
+        cardEl.classList.remove('dragging');
+        document.querySelectorAll('.card.drop-before, .card.drop-after').forEach(el=>{
+          el.classList.remove('drop-before','drop-after');
+        });
+      });
+      cardEl.addEventListener('dragover', (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        colEl.classList.add('drag-over');
+        const rect = cardEl.getBoundingClientRect();
+        const before = (e.clientY - rect.top) < rect.height / 2;
+        cardEl.classList.toggle('drop-before', before);
+        cardEl.classList.toggle('drop-after', !before);
+      });
+      cardEl.addEventListener('dragleave', ()=>{
+        cardEl.classList.remove('drop-before','drop-after');
+      });
+      cardEl.addEventListener('drop', (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        colEl.classList.remove('drag-over');
+        const before = cardEl.classList.contains('drop-before');
+        cardEl.classList.remove('drop-before','drop-after');
+        const draggedId = e.dataTransfer.getData('text/plain');
+        if(draggedId === card.id) return;
+        moveCardTo(draggedId, col.key, card.id, before);
+      });
+      body.appendChild(cardEl);
+    });
+
+    body.addEventListener('dragover', (e)=>{
+      e.preventDefault();
+      colEl.classList.add('drag-over');
+    });
+    body.addEventListener('dragleave', ()=> colEl.classList.remove('drag-over'));
+    body.addEventListener('drop', (e)=>{
+      e.preventDefault();
+      colEl.classList.remove('drag-over');
+      const id = e.dataTransfer.getData('text/plain');
+      moveCardTo(id, col.key, null, false);
+    });
+
+    if(col.shared){
+      const divider = document.createElement('div');
+      divider.className = 'board-divider';
+      board.appendChild(divider);
+    }
+  });
+
+  renderBulkBar();
+}
+
+function renderBulkBar(){
+  const bar = document.getElementById('bulkbar');
+  // Only count selections that still correspond to real Hopper cards owned by the current user.
+  const validIds = new Set(
+    cards.filter(c=> c.column==='hopper' && c.owner===currentUser && selectedIds.has(c.id)).map(c=>c.id)
+  );
+  selectedIds = validIds;
+
+  if(selectedIds.size === 0){
+    bar.style.display = 'none';
+    bar.innerHTML = '';
+    return;
+  }
+  bar.style.display = 'flex';
+  bar.innerHTML = `
+    <span><span class="count">${selectedIds.size}</span> selected</span>
+    <div class="spacer"></div>
+    <button class="btn primary" id="bulkMoveBtn">Move to Postings</button>
+    <button class="btn danger" id="bulkDeleteBtn">Delete</button>
+    <button class="btn" id="bulkClearBtn">Clear</button>
+  `;
+  document.getElementById('bulkMoveBtn').addEventListener('click', moveSelectedToPostings);
+  document.getElementById('bulkDeleteBtn').addEventListener('click', deleteSelectedCards);
+  document.getElementById('bulkClearBtn').addEventListener('click', ()=>{
+    selectedIds.clear();
+    render();
+  });
+}
+
+function moveSelectedToPostings(){
+  if(selectedIds.size === 0) return;
+  cards.forEach(c=>{
+    if(selectedIds.has(c.id)){
+      c.column = 'postings';
+      c.owner = null;
+      c.updatedAt = Date.now();
+    }
+  });
+  selectedIds.clear();
+  save();
+  render();
+}
+
+async function deleteSelectedCards(){
+  if(selectedIds.size === 0) return;
+  const n = selectedIds.size;
+  if(!(await askConfirm(`Permanently delete ${n} selected card${n===1?'':'s'}? This cannot be undone.`))) return;
+  cards.forEach(c=>{
+    if(selectedIds.has(c.id)){
+      c.deleted = true;
+      c.updatedAt = Date.now();
+    }
+  });
+  selectedIds.clear();
+  save();
+  render();
+}
+
+async function pullToHopper(cardId){
+  if(!currentUser){
+    await showAlertModal('Pick or add a user first.');
+    return;
+  }
+  const source = cards.find(c=>c.id===cardId);
+  if(!source) return;
+
+  const alreadyPulled = liveCards().some(c=> c.owner===currentUser && c.sourceId===cardId);
+  if(alreadyPulled){
+    render(); // just re-render in case it was still visible from a stale state
+    return;
+  }
+
+  const clone = {
+    ...source,
+    id: uid(),
+    owner: currentUser,
+    column: 'hopper',
+    sourceId: cardId,
+    updatedAt: Date.now()
+  };
+  cards.push(clone);
+  save();
+  render();
+}
+
+async function moveCardTo(draggedId, targetColumnKey, targetId, before){
+  const targetCol = COLUMNS.find(c=>c.key===targetColumnKey);
+  const draggedCard = cards.find(c=>c.id===draggedId);
+  if(!draggedCard) return;
+
+  const draggedIsPosting = draggedCard.owner === null || draggedCard.owner === undefined;
+
+  // Dropping a shared Postings card onto a personal column = pull (copy), same as the button.
+  if(draggedIsPosting && targetCol && !targetCol.shared){
+    if(!currentUser){
+      await showAlertModal('Pick or add a user first.');
+      return;
+    }
+    const alreadyPulled = liveCards().some(c=> c.owner===currentUser && c.sourceId===draggedCard.id);
+    if(alreadyPulled){
+      render();
+      return;
+    }
+    const clone = { ...draggedCard, id: uid(), owner: currentUser, column: targetColumnKey, sourceId: draggedCard.id, updatedAt: Date.now() };
+    cards.push(clone);
+    columnSortMode[targetColumnKey] = 'manual';
+    save();
+    render();
+    return;
+  }
+
+  // Don't allow dragging a personal card into the shared Postings column (ambiguous ownership).
+  if(!draggedIsPosting && targetCol && targetCol.shared){
+    return;
+  }
+
+  const draggedIdx = cards.findIndex(c=>c.id===draggedId);
+  if(draggedIdx === -1) return;
+  const [movedCard] = cards.splice(draggedIdx, 1);
+  movedCard.column = targetColumnKey;
+  movedCard.updatedAt = Date.now();
+
+  if(targetId){
+    let targetIdx = cards.findIndex(c=>c.id===targetId);
+    if(targetIdx === -1){
+      cards.push(movedCard);
+    }else{
+      const insertIdx = before ? targetIdx : targetIdx + 1;
+      cards.splice(insertIdx, 0, movedCard);
+    }
+  }else{
+    cards.push(movedCard);
+  }
+
+  columnSortMode[targetColumnKey] = 'manual';
+
+  save();
+  render();
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function escapeAttr(str){ return escapeHtml(str); }
+
+function openModal(card){
+  editingId = card ? card.id : null;
+  document.getElementById('modalTitle').textContent = card ? 'Edit entry' : 'New entry';
+  document.getElementById('f-role').value = card ? card.role || '' : '';
+  document.getElementById('f-company').value = card ? card.company || '' : '';
+  document.getElementById('f-location').value = card ? card.location || '' : '';
+  document.getElementById('f-salary').value = card ? card.salary || '' : '';
+  document.getElementById('f-column').value = card ? card.column : 'postings';
+  document.getElementById('f-date').value = card ? card.date || '' : new Date().toISOString().slice(0,10);
+  document.getElementById('f-url').value = card ? card.url || '' : '';
+  document.getElementById('f-tags').value = card && card.tags ? card.tags.filter(t=>!t.startsWith('from:')).join(', ') : '';
+  document.getElementById('f-notes').value = card ? card.notes || '' : '';
+  document.getElementById('deleteBtn').style.display = card ? 'inline-block' : 'none';
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeModal(){
+  document.getElementById('overlay').classList.remove('open');
+  editingId = null;
+}
+
+document.addEventListener('click', ()=>{
+  document.querySelectorAll('.notes-wrap.tt-open').forEach(w=>{
+    w.classList.remove('tt-open');
+    const tip = w.querySelector('.notes-tooltip');
+    if(tip) tip.style.display = 'none';
+  });
+});
+document.addEventListener('scroll', ()=>{
+  document.querySelectorAll('.notes-wrap.tt-open').forEach(w=>{
+    w.classList.remove('tt-open');
+    const tip = w.querySelector('.notes-tooltip');
+    if(tip) tip.style.display = 'none';
+  });
+}, true);
+
+document.getElementById('openAdd').addEventListener('click', ()=> openModal(null));
+document.getElementById('cancelBtn').addEventListener('click', closeModal);
+document.getElementById('overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'overlay') closeModal();
+});
+
+let searchDebounce;
+document.getElementById('searchInput').addEventListener('input', (e)=>{
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(()=>{
+    searchQuery = e.target.value;
+    render();
+  }, 120);
+});
+
+document.getElementById('decayToggleCb').addEventListener('change', (e)=>{
+  decayEnabled = e.target.checked;
+  render();
+});
+
+function parsePosting(text, url){
+  const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+  const result = {role:'', company:'', location:'', salary:'', url: url || '', notes:''};
+
+  const urlMatch = text.match(/https?:\/\/\S+/);
+  if(!result.url && urlMatch) result.url = urlMatch[0];
+
+  const salaryMatch = text.match(/\$\s?[\d,]+(?:\.\d+)?\s?(?:k|K)?(?:\s?-\s?\$?\s?[\d,]+(?:\.\d+)?\s?(?:k|K)?)?/);
+  if(salaryMatch) result.salary = salaryMatch[0].trim();
+
+  const locationRegex = /\b([A-Z][a-zA-Z.]+(?:\s[A-Z][a-zA-Z.]+)*,\s?[A-Z]{2}\b)|\bRemote\b|\bHybrid\b|\bOn-?site\b/;
+  let usedLineIdx = new Set();
+  lines.forEach((line, idx)=>{
+    if(!result.location){
+      const m = line.match(locationRegex);
+      if(m){ result.location = m[0]; usedLineIdx.add(idx); }
+    }
+  });
+
+  const remaining = lines.filter((l, idx)=>{
+    if(usedLineIdx.has(idx)) return false;
+    if(salaryMatch && l.includes(salaryMatch[0])) return false;
+    if(urlMatch && l.includes(urlMatch[0])) return false;
+    return true;
+  });
+
+  // Most boards list the job title first, then the company. BuiltIn's
+  // (and its city-specific subdomains, e.g. builtinboston.com) copied
+  // text comes out company-first, so flip the assumed order for those.
+  let hostname = '';
+  try{ hostname = new URL(result.url).hostname.toLowerCase(); }catch(e){ /* no url, use default order */ }
+  const companyFirst = hostname.includes('builtin');
+
+  if(remaining.length > 0 && remaining.length > 1){
+    if(companyFirst){
+      result.company = remaining[0];
+      result.role = remaining[1];
+    }else{
+      result.role = remaining[0];
+      result.company = remaining[1];
+    }
+    if(remaining.length > 2) result.notes = remaining.slice(2).join(' ').slice(0, 400);
+  }else if(remaining.length === 1){
+    result.role = remaining[0];
+  }
+
+  return result;
+}
+
+function openModalPrefill(data){
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'New entry';
+  document.getElementById('f-role').value = data.role || '';
+  document.getElementById('f-company').value = data.company || '';
+  document.getElementById('f-location').value = data.location || '';
+  document.getElementById('f-salary').value = data.salary || '';
+  document.getElementById('f-column').value = 'postings';
+  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f-url').value = data.url || '';
+  document.getElementById('f-tags').value = '';
+  document.getElementById('f-notes').value = data.notes || '';
+  document.getElementById('deleteBtn').style.display = 'none';
+  document.getElementById('overlay').classList.add('open');
+}
+
+document.getElementById('fetchUrlBtn').addEventListener('click', async ()=>{
+  const url = document.getElementById('p-fetch-url').value.trim();
+  const status = document.getElementById('fetchStatus');
+  if(!url){
+    status.textContent = 'Enter a URL first.';
+    status.style.color = '#e0a292';
+    return;
+  }
+  status.textContent = 'Fetching…';
+  status.style.color = 'var(--paper-dim)';
+  try{
+    const resp = await fetch(`http://localhost:8787/scrape?url=${encodeURIComponent(url)}`);
+    const data = await resp.json();
+    if(!resp.ok){
+      status.textContent = data.error || 'Fetch failed.';
+      status.style.color = '#e0a292';
+      return;
+    }
+    document.getElementById('pasteOverlay').classList.remove('open');
+    openModalPrefill({
+      role: data.role || '',
+      company: data.company || '',
+      location: data.location || '',
+      salary: data.salary || '',
+      url: data.url || url,
+      notes: data.notes || ''
+    });
+    status.textContent = '';
+  }catch(e){
+    status.textContent = "Couldn't reach the local helper — is it running? (node scrape-server.js)";
+    status.style.color = '#e0a292';
+  }
+});
+
+document.getElementById('openPaste').addEventListener('click', ()=>{
+  document.getElementById('p-url').value = '';
+  document.getElementById('p-text').value = '';
+  document.getElementById('p-fetch-url').value = '';
+  document.getElementById('fetchStatus').textContent = '';
+  document.getElementById('pasteOverlay').classList.add('open');
+});
+document.getElementById('pasteCancelBtn').addEventListener('click', ()=>{
+  document.getElementById('pasteOverlay').classList.remove('open');
+});
+document.getElementById('pasteOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'pasteOverlay') document.getElementById('pasteOverlay').classList.remove('open');
+});
+document.getElementById('pasteParseBtn').addEventListener('click', async ()=>{
+  const text = document.getElementById('p-text').value;
+  const url = document.getElementById('p-url').value.trim();
+  if(!text.trim() && !url){
+    await showAlertModal('Paste some posting text first.');
+    return;
+  }
+  const parsed = parsePosting(text, url);
+  document.getElementById('pasteOverlay').classList.remove('open');
+  openModalPrefill(parsed);
+});
+
+document.getElementById('saveBtn').addEventListener('click', async ()=>{
+  const column = document.getElementById('f-column').value;
+  const url = document.getElementById('f-url').value.trim();
+  let tags = document.getElementById('f-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  tags = tags.filter(t=>!t.startsWith('from:'));
+  const src = sourceTagFromUrl(url);
+  if(src) tags.push(src);
+  if(currentUser) tags.push(`from:${currentUser}`);
+
+  const data = {
+    role: document.getElementById('f-role').value.trim(),
+    company: document.getElementById('f-company').value.trim(),
+    location: document.getElementById('f-location').value.trim(),
+    salary: document.getElementById('f-salary').value.trim(),
+    column,
+    date: document.getElementById('f-date').value,
+    url,
+    tags,
+    notes: document.getElementById('f-notes').value.trim(),
+    owner: column === 'postings' ? null : (currentUser || null),
+    updatedAt: Date.now()
+  };
+  if(!data.role && !data.company){
+    await showAlertModal('Add at least a role or company name.');
+    return;
+  }
+  if(!data.owner && column !== 'postings'){
+    await showAlertModal('Pick or add a user first.');
+    return;
+  }
+  if(editingId){
+    const idx = cards.findIndex(c=>c.id===editingId);
+    if(idx > -1) cards[idx] = {...cards[idx], ...data};
+  }else{
+    cards.push({id: uid(), ...data});
+  }
+  await save();
+  render();
+  closeModal();
+});
+
+document.getElementById('deleteBtn').addEventListener('click', async ()=>{
+  if(!editingId) return;
+  if(!(await askConfirm('Delete this entry?'))) return;
+  const idx = cards.findIndex(c=>c.id===editingId);
+  if(idx > -1){
+    cards[idx].deleted = true;
+    cards[idx].updatedAt = Date.now();
+  }
+  await save();
+  render();
+  closeModal();
+});
+
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const payload = { version: 2, cards, users };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `job-tracker-backup-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  document.getElementById('importFile').click();
+});
+
+document.getElementById('importFile').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  let importedCards, importedUsers = [];
+  try{
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    if(Array.isArray(parsed)){
+      importedCards = parsed; // legacy format: bare array of cards
+    }else if(parsed && Array.isArray(parsed.cards)){
+      importedCards = parsed.cards;
+      importedUsers = Array.isArray(parsed.users) ? parsed.users : [];
+    }else{
+      throw new Error('unrecognized format');
+    }
+  }catch(err){
+    await showAlertModal("Couldn't read that file. Make sure it's a backup exported from this board.");
+    return;
+  }
+  const validKeys = new Set(COLUMNS.map(c=>c.key));
+  importedCards = importedCards.filter(c=> c && typeof c === 'object' && validKeys.has(c.column === 'wishlist' ? 'hopper' : c.column));
+  importedCards.forEach(c=>{
+    if(c.column === 'wishlist') c.column = 'hopper';
+    if(c.owner === undefined) c.owner = currentUser || null;
+    if(!c.tags) c.tags = [];
+    if(c.updatedAt === undefined) c.updatedAt = Date.now();
+    if(c.deleted === undefined) c.deleted = false;
+  });
+  if(importedCards.length === 0){
+    await showAlertModal('No valid entries found in that file.');
+    return;
+  }
+  const replace = await askConfirm(
+    `Found ${importedCards.length} entr${importedCards.length===1?'y':'ies'} in that file.\n\n` +
+    `Click OK to REPLACE your current board with this file.\n` +
+    `Click Cancel to MERGE it into your current board instead.`
+  );
+  if(replace){
+    cards = importedCards.map(c=> ({...c, id: c.id || uid()}));
+    importedUsers.forEach(u=>{ if(!users.includes(u)) users.push(u); });
+  }else{
+    const existingIds = new Set(cards.map(c=>c.id));
+    importedCards.forEach(c=>{
+      const id = c.id && !existingIds.has(c.id) ? c.id : uid();
+      cards.push({...c, id});
+      existingIds.add(id);
+    });
+    importedUsers.forEach(u=>{ if(!users.includes(u)) users.push(u); });
+  }
+  await save();
+  await saveUsers();
+  renderUserSelect();
+  render();
+});
+
+function updateSyncUI(){
+  const btn = document.getElementById('syncBtn');
+  btn.style.display = syncUrl ? 'inline-block' : 'none';
+  btn.classList.toggle('sync-dirty', !!hasUnsyncedChanges);
+  btn.textContent = hasUnsyncedChanges ? '⇄ Synchronize now — changes pending' : '⇄ Synchronize';
+  btn.title = hasUnsyncedChanges
+    ? 'You have local changes not yet pushed to the shared Sheet'
+    : 'Pull others\' changes and push yours';
+}
+
+// Pull remote, merge with local (last-write-wins per card, deduped Postings),
+// then push the merged result back so everyone converges on the same state.
+// This is the ONLY thing that talks to the network outside of load() and the
+// initial settings connection — routine local edits never do.
+async function synchronize(){
+  if(!syncUrl) return;
+  setSyncIndicator('syncing');
+  const remote = await remoteFetchAll();
+  if(!remote){
+    setSyncIndicator('failed');
+    return;
+  }
+  const merged = mergeCardsAndUsers(remote.cards, remote.users);
+  cards = merged.cards;
+  users = merged.users;
+  if(!currentUser || !users.includes(currentUser)){
+    currentUser = users[0] || null;
+    await saveCurrentUser();
+  }
+  await store.set(STORAGE_KEY, JSON.stringify(cards));
+  await store.set(USERS_KEY, JSON.stringify(users));
+  const ok = await remotePushAll(cards, users);
+  setSyncIndicator(ok ? 'synced' : 'failed');
+  hasUnsyncedChanges = false;
+  updateSyncUI();
+  renderUserSelect();
+  render();
+}
+
+document.getElementById('settingsBtn').addEventListener('click', ()=>{
+  document.getElementById('s-sync-url').value = syncUrl || '';
+  document.getElementById('s-sync-key').value = syncSecret || '';
+  document.getElementById('settingsOverlay').classList.add('open');
+});
+document.getElementById('settingsCancelBtn').addEventListener('click', ()=>{
+  document.getElementById('settingsOverlay').classList.remove('open');
+});
+document.getElementById('settingsOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'settingsOverlay') document.getElementById('settingsOverlay').classList.remove('open');
+});
+
+document.getElementById('settingsSaveBtn').addEventListener('click', async ()=>{
+  const url = document.getElementById('s-sync-url').value.trim();
+  const key = document.getElementById('s-sync-key').value.trim();
+  if(!url || !key){
+    await showAlertModal('Fill in both the Sync URL and the Sync key, or use "Clear / go local-only" instead.');
+    return;
+  }
+  syncUrl = url;
+  syncSecret = key;
+  await store.set(SYNC_URL_KEY, syncUrl);
+  await store.set(SYNC_SECRET_KEY, syncSecret);
+  document.getElementById('settingsOverlay').classList.remove('open');
+  updateSyncUI();
+
+  const beforeCount = cards.length;
+  await synchronize();
+  await showAlertModal(`Connected and merged. Board now has ${cards.length} card${cards.length===1?'':'s'} and ${users.length} user${users.length===1?'':'s'}.`);
+});
+
+document.getElementById('settingsClearBtn').addEventListener('click', async ()=>{
+  if(!(await askConfirm('Go back to local-only storage? This board will stop syncing with the shared Sheet (your local data stays as-is).'))) return;
+  syncUrl = null;
+  syncSecret = null;
+  await store.set(SYNC_URL_KEY, '');
+  await store.set(SYNC_SECRET_KEY, '');
+  hasUnsyncedChanges = false;
+  setSyncIndicator('off');
+  document.getElementById('settingsOverlay').classList.remove('open');
+  updateSyncUI();
+});
+
+document.getElementById('syncBtn').addEventListener('click', synchronize);
+
+load();
+</script>
+
+</body>
+</html>
