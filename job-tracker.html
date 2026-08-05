@@ -222,6 +222,23 @@
     filter:grayscale(0.5);
   }
   .card.claimed:hover{ opacity:0.8; }
+  .card.recently-synced{
+    box-shadow: 0 0 0 2px var(--brass);
+  }
+  .card.recently-synced::after{
+    content:'new';
+    position:absolute;
+    top:8px;
+    right:34px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:#1b1e24;
+    background:var(--brass);
+    padding:2px 6px;
+    border-radius:8px;
+  }
   .claimed-badge{
     display:inline-block;
     margin:8px 0 0 16px;
@@ -977,6 +994,7 @@ const USERS_KEY = 'job-tracker-users';
 const CURRENT_USER_KEY = 'job-tracker-current-user';
 const SYNC_URL_KEY = 'job-tracker-sync-url';
 const SYNC_SECRET_KEY = 'job-tracker-sync-secret';
+const LAST_SYNC_KEY = 'job-tracker-last-sync-at';
 
 let cards = [];
 let users = [];
@@ -990,6 +1008,8 @@ let selectedIds = new Set();
 let hideClaimedPostings = true;
 let decayEnabled = true;
 let currentView = 'board'; // 'board' | 'postings'
+let lastSyncAt = 0;
+let recentlyChangedIds = new Set(); // cards touched since lastSyncAt, for highlighting
 let syncUrl = null;
 let syncSecret = null;
 
@@ -1251,6 +1271,15 @@ function mergeCardsAndUsers(remoteCards, remoteUsers){
     !(c.deleted && (Date.now() - (c.updatedAt || 0)) > TOMBSTONE_GC_MS)
   );
   const mergedUsers = Array.from(new Set([...users, ...remoteUsers]));
+
+  // Anything touched (created, edited, moved) since our last sync gets
+  // flagged for a visual highlight, then the cutoff advances to now.
+  recentlyChangedIds = new Set(
+    mergedCards.filter(c=> !c.deleted && (c.updatedAt||0) > lastSyncAt).map(c=>c.id)
+  );
+  lastSyncAt = Date.now();
+  store.set(LAST_SYNC_KEY, String(lastSyncAt));
+
   return { cards: mergedCards, users: mergedUsers };
 }
 
@@ -1399,6 +1428,10 @@ async function load(){
     const res = await store.get(SYNC_SECRET_KEY);
     syncSecret = res && res.value ? res.value : null;
   }catch(e){ syncSecret = null; }
+  try{
+    const res = await store.get(LAST_SYNC_KEY);
+    lastSyncAt = res && res.value ? (Number(res.value) || 0) : 0;
+  }catch(e){ lastSyncAt = 0; }
 
   if(syncUrl){
     const remote = await remoteFetchAll();
@@ -1696,6 +1729,7 @@ function render(){
     if(selectable && selectedIds.has(card.id)) cardEl.classList.add('selected');
     const isClaimed = col.shared && claimedSourceIds.has(card.id);
     if(isClaimed) cardEl.classList.add('claimed');
+    if(recentlyChangedIds.has(card.id)) cardEl.classList.add('recently-synced');
     const decay = decayEnabled ? decayStyleFor(card, col, isClaimed) : null;
     if(decay){
       cardEl.style.cssText += decay.style;
