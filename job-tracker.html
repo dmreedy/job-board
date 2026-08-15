@@ -557,9 +557,6 @@
   .posting-link-empty .link-border-fx{
     background:transparent;
   }
-  .posting-link-empty:hover{
-    background:transparent;
-  }
   .link-border-fx{
     position:absolute;
     inset:-1px;
@@ -572,6 +569,16 @@
   }
   .posting-link:hover .link-border-fx{
     background:rgba(201,163,93,0.6);
+  }
+  /* Chained (not just .posting-link-empty alone) so this reliably beats
+     the two rules above regardless of source order — an invisible
+     nameplate should never light up on hover, since there's nothing
+     there to click. */
+  .posting-link.posting-link-empty:hover{
+    background:transparent;
+  }
+  .posting-link.posting-link-empty:hover .link-border-fx{
+    background:transparent;
   }
   .card .posting-link .company{
     margin:5px 0 2px 0;
@@ -594,7 +601,7 @@
     color:var(--brass);
   }
   .card .role{
-    font-size:12.5px;
+    font-size:15px;
     color:var(--paper-dim);
     margin:0 0 8px 0;
     text-shadow:0 1px 3px rgba(0,0,0,0.5);
@@ -1773,6 +1780,10 @@ const clipResizeObserver = new ResizeObserver(entries=>{
       nameplate.style.clipPath = npPoly;
       const npFx = nameplate.querySelector(':scope > .link-border-fx');
       if(npFx) npFx.style.clipPath = npPoly;
+      // Push the right padding in by the cut depth, so text content stops
+      // exactly where the diagonal starts rather than running up against
+      // (or under) the clipped corner.
+      nameplate.style.paddingRight = (npCut + 12) + 'px';
     }
 
     // Vertically center the Hopper select checkbox (and the colored type
