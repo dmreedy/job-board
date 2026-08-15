@@ -491,7 +491,6 @@
   }
 
   .card{
-    background:var(--panel-2);
     border:none;
     border-radius:3px;
     padding:11px 12px 12px 30px;
@@ -500,6 +499,14 @@
     cursor:grab;
     mask-image: linear-gradient(to bottom, black 0%, black 87.5%, transparent 100%);
     -webkit-mask-image: linear-gradient(to bottom, black 0%, black 87.5%, transparent 100%);
+  }
+  .card-bg-fx{
+    position:absolute;
+    inset:0;
+    background:var(--panel-2);
+    z-index:-2;
+    border-radius:3px;
+    pointer-events:none;
   }
   .card-border-fx{
     position:absolute;
@@ -709,10 +716,11 @@
   .column[data-col="discarded"]{ --accent: var(--discarded); }
   .card[data-col="postings"]{
     --accent: var(--postings);
+  }
+  .card[data-col="postings"] .card-bg-fx{
     background:
       linear-gradient(rgba(122,95,140,0.08), rgba(122,95,140,0.08)),
       var(--panel-2);
-    border-color:rgba(122,95,140,0.3);
   }
   .card[data-col="hopper"]{ --accent: var(--hopper); }
   .card[data-col="applied"]{ --accent: var(--applied); }
@@ -1736,22 +1744,29 @@ function renderNotesBlock(notes){
 // Cards get their corner clipped along the hypotenuse of an isosceles right
 // triangle whose legs are 1/8 of the card's own width — a true width-relative
 // cut, not a fixed guess, so it has to be computed once the card's actual
-// rendered width is known. A shared observer (reset each render) also keeps
-// .card-border-fx in sync with the same clip shape, since clip-path on a
-// ::pseudo can't be set from JS the way it can on a real element.
+// rendered width is known.
 //
-// The link box itself is square-cornered (no clip) and deliberately stops
-// at 7/8 of the card's width — exactly where the card's own cut begins —
-// so the notch is always blank space next to it, never covered or clipped
-// by the link box itself.
+// The clip is applied to .card-bg-fx and .card-border-fx — dedicated
+// background/border layers — rather than to .card itself. clip-path on an
+// element clips its entire rendered subtree, background AND children alike;
+// clipping .card directly meant the nameplate (a child) was also being cut
+// off wherever it extended into the clipped corner, even though visually
+// we want the nameplate free to render across that whole area. Clipping
+// only the background layers gives the same visual notch without also
+// constraining the content sitting on top of it.
 const clipResizeObserver = new ResizeObserver(entries=>{
   entries.forEach(entry=>{
     const el = entry.target;
     if(!el.classList.contains('card')) return;
-    const w = entry.contentRect.width;
+    // entry.contentRect excludes padding (it's the content-box size) — with
+    // 30px+12px of horizontal padding on this element, that silently
+    // shrank every proportion computed below. getBoundingClientRect gives
+    // the real border-box width instead.
+    const w = el.getBoundingClientRect().width;
     const cut = Math.max(0, w / 8);
     const poly = `polygon(0 0, calc(100% - ${cut}px) 0, 100% ${cut}px, 100% 100%, 0 100%)`;
-    el.style.clipPath = poly;
+    const bgFx = el.querySelector(':scope > .card-bg-fx');
+    if(bgFx) bgFx.style.clipPath = poly;
     const fx = el.querySelector(':scope > .card-border-fx');
     if(fx) fx.style.clipPath = poly;
 
@@ -1767,10 +1782,10 @@ const clipResizeObserver = new ResizeObserver(entries=>{
     let npCut = 0;
     if(nameplate){
       // Right edge lands at 23/24 of the card's full width, measured from
-      // the card's own left edge — a fixed proportion of the card, set
-      // explicitly here rather than sized to fit the company/role text,
-      // so it stays the same length regardless of content.
-      const npWidth = Math.max(0, (w * (23/24)) - padLeft);
+      // the card's own left edge, minus a small extra gap so the right
+      // side isn't flush against that boundary — balancing against the
+      // card's own generous left padding (30px vs. 12px on the right).
+      const npWidth = Math.max(0, (w * (23/24)) - padLeft - 18);
       nameplate.style.width = npWidth + 'px';
       // Only the top-right corner clipped — left edge and bottom-right
       // both stay square. Same 1/8-of-width cut as the card's own clip,
@@ -1784,6 +1799,16 @@ const clipResizeObserver = new ResizeObserver(entries=>{
       // exactly where the diagonal starts rather than running up against
       // (or under) the clipped corner.
       nameplate.style.paddingRight = (npCut + 12) + 'px';
+
+      // Everything below the nameplate defaults to the card's full content
+      // width, which is further right than where the nameplate itself
+      // stops — match them to the nameplate's actual width so all their
+      // right edges align, rather than each section stopping wherever its
+      // own default sizing happens to land.
+      ['.details', '.utags', '.card-body', '.pull-btn'].forEach(sel=>{
+        const target = el.querySelector(`:scope > ${sel}`);
+        if(target) target.style.width = npWidth + 'px';
+      });
     }
 
     // Vertically center the Hopper select checkbox (and the colored type
@@ -1906,6 +1931,7 @@ function render(){
     const npAttrs = card.url ? `href="${escapeAttr(card.url)}" target="_blank"` : '';
     const npClass = card.url ? 'posting-link' : 'posting-link posting-link-empty';
     cardEl.innerHTML = `
+      <div class="card-bg-fx"></div>
       <div class="card-border-fx"></div>
       <span class="accent-dot"></span>
       ${selectable ? `<span class="select-mark">${selectedIds.has(card.id) ? '✓' : ''}</span>` : ''}
