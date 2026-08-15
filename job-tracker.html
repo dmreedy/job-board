@@ -299,13 +299,13 @@
     font-family:'IBM Plex Mono',monospace;
     font-size:10.5px;
     color:var(--brass);
-    background:rgba(201,163,93,0.14);
+    background:rgba(201,163,93,0.22);
     border-radius:10px;
     padding:1px 8px;
   }
   .utag.src{
-    color:var(--postings);
-    background:rgba(122,95,140,0.16);
+    color:#c9b3da;
+    background:rgba(122,95,140,0.28);
   }
 
   .bulkbar{
@@ -342,7 +342,7 @@
     color:#1b1e24;
     pointer-events:none;
   }
-  .card.selectable{ padding-left:30px; cursor:pointer; }
+  .card.selectable{ cursor:pointer; }
   .card.selectable:hover{ border-color:var(--brass-dim); }
   .card.selectable.selected{
     border-color:var(--brass);
@@ -494,7 +494,7 @@
     background:var(--panel-2);
     border:none;
     border-radius:3px;
-    padding:11px 12px 12px;
+    padding:11px 12px 12px 30px;
     position:relative;
     z-index:0;
     cursor:grab;
@@ -541,13 +541,24 @@
     display:block;
     color:inherit;
     text-decoration:none;
-    margin:10px 0 8px 0;
-    padding:11px 15px;
+    margin:8px 0 8px 0;
+    padding:9px 12px;
     border:none;
     background:rgba(201,163,93,0.4);
     position:relative;
     z-index:0;
     filter: drop-shadow(0 5px 10px rgba(0,0,0,0.65));
+  }
+  .posting-link-empty{
+    background:transparent;
+    filter:none;
+    cursor:default;
+  }
+  .posting-link-empty .link-border-fx{
+    background:transparent;
+  }
+  .posting-link-empty:hover{
+    background:transparent;
   }
   .link-border-fx{
     position:absolute;
@@ -563,7 +574,7 @@
     background:rgba(201,163,93,0.6);
   }
   .card .posting-link .company{
-    margin:0 0 2px 0;
+    margin:5px 0 2px 0;
     text-shadow: 0 2px 3px rgba(0,0,0,0.85), 0 -1px 0 rgba(255,255,255,0.08);
   }
   .card .posting-link .role{
@@ -595,7 +606,7 @@
   .detail{
     font-family:'IBM Plex Mono',monospace;
     font-size:10.5px;
-    color:var(--paper-dim);
+    color:var(--paper);
     border:none;
     background:rgba(0,0,0,0.24);
     border-radius:2px;
@@ -643,6 +654,9 @@
     right:8px;
     display:flex;
     gap:4px;
+    transform: scale(0.75);
+    transform-origin: top right;
+    z-index:5;
   }
   .icon-btn{
     background:none;
@@ -654,6 +668,10 @@
     font-family:'IBM Plex Mono',monospace;
   }
   .icon-btn:hover{ color:var(--paper); }
+  .icon-btn.edit-btn{
+    font-size:18px;
+    padding:0;
+  }
   .pull-btn{
     display:block;
     width:100%;
@@ -788,7 +806,7 @@
     /* Bigger touch targets — the desktop sizes assume a mouse pointer. */
     .icon-btn{ padding:6px 8px; font-size:16px; }
     .select-mark, .card-select{ width:18px; height:18px; }
-    .card.selectable{ padding-left:34px; }
+    .card{ padding-left:34px; }
     .pull-btn{ padding:9px 8px; }
     .add-btn, .btn{ padding:10px 16px; }
   }
@@ -1271,7 +1289,7 @@ const FULLY_DECAYED_COLUMNS = new Set(['passed','discarded']);
 function decayStyleFor(card, col, isClaimed){
   if(isClaimed) return null;
   if(FULLY_DECAYED_COLUMNS.has(col.key)){
-    return { style: `opacity:0.45; filter:grayscale(75%);`, days: null };
+    return { style: `opacity:0.45; filter:grayscale(95%);`, days: null };
   }
   if(!DECAY_ELIGIBLE_COLUMNS.has(col.key)) return null;
   if(card.updatedAt === undefined || card.updatedAt === null) return null;
@@ -1279,7 +1297,7 @@ function decayStyleFor(card, col, isClaimed){
   if(days <= 0) return null;
   const factor = Math.min(1, days / DECAY_FULL_DAYS);
   const opacity = (1 - factor*0.55).toFixed(2);
-  const grayscalePct = Math.round(factor*75);
+  const grayscalePct = Math.round(factor*95);
   return {
     style: `opacity:${opacity}; filter:grayscale(${grayscalePct}%);`,
     days: Math.floor(days)
@@ -1730,47 +1748,68 @@ const clipResizeObserver = new ResizeObserver(entries=>{
 
     const cardStyle = getComputedStyle(el);
     const padLeft = parseFloat(cardStyle.paddingLeft) || 0;
-    const padRight = parseFloat(cardStyle.paddingRight) || 0;
 
+    // The nameplate structure always exists now (invisibly styled when
+    // there's no URL). It has its own top-right clip, same style as the
+    // card's — the pen button then sits on the card, in the triangular
+    // space that clip exposes (the nameplate's own background doesn't
+    // cover that corner, so the card shows through underneath it).
     const nameplate = el.querySelector(':scope > .posting-link');
+    let npCut = 0;
     if(nameplate){
-      // Right edge lands at 7/8 of the card's full width, measured from the
-      // card's own left edge — same x-position where the card's clip starts.
-      const npWidth = Math.max(0, (w * 0.875) - padLeft);
+      // Right edge lands at 17/18 of the card's full width, measured from
+      // the card's own left edge — a fixed proportion of the card, set
+      // explicitly here rather than sized to fit the company/role text,
+      // so it stays the same length regardless of content.
+      const npWidth = Math.max(0, (w * (17/18)) - padLeft);
       nameplate.style.width = npWidth + 'px';
-      // Only the top-right corner clipped now — left edge and bottom-right
-      // both stay square. A finer 1/16-of-width equilateral cut — subtler
-      // than the card's own 1/8 cut, measured against the nameplate's own
-      // (narrower) width.
-      const npCut = Math.max(0, npWidth / 16);
+      // Only the top-right corner clipped — left edge and bottom-right
+      // both stay square. Same 1/8-of-width cut as the card's own clip,
+      // measured against the nameplate's own (narrower) width.
+      npCut = Math.max(0, npWidth / 8);
       const npPoly = `polygon(0 0, calc(100% - ${npCut}px) 0, 100% ${npCut}px, 100% 100%, 0 100%)`;
       nameplate.style.clipPath = npPoly;
       const npFx = nameplate.querySelector(':scope > .link-border-fx');
       if(npFx) npFx.style.clipPath = npPoly;
-
-      // Top-align the Hopper select checkbox (and the colored type dot,
-      // on non-selectable cards) with the nameplate's own top edge, when
-      // a nameplate is present — measured from real rendered positions
-      // rather than computed offsets, since the nameplate's height and
-      // position vary with its content.
-      const cardRect = el.getBoundingClientRect();
-      const npRect = nameplate.getBoundingClientRect();
-      const npTopOffset = npRect.top - cardRect.top;
-
-      const selectMark = el.querySelector(':scope > .select-mark');
-      if(selectMark) selectMark.style.top = npTopOffset + 'px';
-
-      const dot = el.querySelector(':scope > .accent-dot');
-      if(dot) dot.style.top = npTopOffset + 'px';
     }
 
-    // The edit button always nestles into the card's own clipped notch now
-    // (the link box, when present, stops short of that area entirely).
+    // Vertically center the Hopper select checkbox (and the colored type
+    // dot, on non-selectable cards) against the company name text itself —
+    // not the nameplate's own padded box, which sits higher than the text.
+    const cardRect = el.getBoundingClientRect();
+    const companyEl = el.querySelector('.company');
+    if(companyEl){
+      const companyRect = companyEl.getBoundingClientRect();
+      const companyCenterY = companyRect.top + companyRect.height / 2;
+      // Each target's own height differs (dot vs. checkbox), so center
+      // each individually rather than sharing one offset.
+      const selectMark = el.querySelector(':scope > .select-mark');
+      if(selectMark){
+        const smRect = selectMark.getBoundingClientRect();
+        selectMark.style.top = (companyCenterY - cardRect.top - smRect.height / 2) + 'px';
+      }
+      const dot = el.querySelector(':scope > .accent-dot');
+      if(dot){
+        const dotRect = dot.getBoundingClientRect();
+        dot.style.top = (companyCenterY - cardRect.top - dotRect.height / 2) + 'px';
+      }
+    }
+
+    // The edit button nestles into the nameplate's own clipped corner —
+    // scaled down (see .card-actions CSS) so it actually fits the notch
+    // instead of overflowing onto the nameplate's opaque area.
     const actions = el.querySelector(':scope > .card-actions');
-    if(actions){
-      const d = cut / 2; // centroid-ish: halfway into the triangular notch
-      actions.style.top = d + 'px';
-      actions.style.right = d + 'px';
+    if(actions && nameplate){
+      const npRect = nameplate.getBoundingClientRect();
+      const npTopInCard = npRect.top - cardRect.top;
+      const npRightGapInCard = cardRect.right - npRect.right;
+      // Positioned exactly where the nameplate's own top-right corner
+      // would sit if it weren't clipped — since the clip removes the
+      // nameplate's material at precisely that point, anchoring here is
+      // what makes the button read as sitting on the card underneath,
+      // rather than on the nameplate itself.
+      actions.style.top = npTopInCard + 'px';
+      actions.style.right = npRightGapInCard + 'px';
     }
   });
 });
@@ -1845,6 +1884,14 @@ function render(){
         ? `Last updated ${decay.days} day${decay.days===1?'':'s'} ago`
         : (col.key === 'passed' ? 'Ghosted' : 'Discarded');
     }
+    // Always render the nameplate structure, even with no URL — an
+    // invisible-styled <div> instead of a real <a>. Keeping the geometry
+    // (width, clip, notch) identical either way is what lets the edit
+    // button and dot/checkbox align consistently on every card, not just
+    // ones with an actual link.
+    const npTag = card.url ? 'a' : 'div';
+    const npAttrs = card.url ? `href="${escapeAttr(card.url)}" target="_blank"` : '';
+    const npClass = card.url ? 'posting-link' : 'posting-link posting-link-empty';
     cardEl.innerHTML = `
       <div class="card-border-fx"></div>
       <span class="accent-dot"></span>
@@ -1852,15 +1899,12 @@ function render(){
       <div class="card-actions">
         <button class="icon-btn edit-btn" title="Edit">✎</button>
       </div>
-      ${card.url ? `
-      <a href="${escapeAttr(card.url)}" target="_blank" class="posting-link">
+      <${npTag} ${npAttrs} class="${npClass}">
         <div class="link-border-fx"></div>
         <p class="company">${escapeHtml(card.company || 'Unknown company')}</p>
         <p class="role">${escapeHtml(card.role || '')}</p>
-        <span class="posting-link-hint">↗ View posting</span>
-      </a>` : `
-      <p class="company">${escapeHtml(card.company || 'Unknown company')}</p>
-      <p class="role">${escapeHtml(card.role || '')}</p>`}
+        ${card.url ? `<span class="posting-link-hint">↗ View posting</span>` : ''}
+      </${npTag}>
       <div class="details">${tags.join('')}</div>
       ${userTags ? `<div class="utags">${userTags}</div>` : ''}
       ${card.notes ? `<div class="card-body">${renderNotesBlock(card.notes)}</div>` : ''}
