@@ -16,7 +16,7 @@
     --paper-dim: #b9b3a0;
     --brass: #c9a35d;
     --brass-dim: #8a723f;
-    --postings: #b8a0d6;
+    --postings: #7a5f8c;
     --hopper: #6b7a99;
     --applied: #7c9a6f;
     --interviewing: #4f8a8a;
@@ -165,7 +165,7 @@
     gap:6px;
   }
   .column.shared .col-subbar{
-    background:rgba(184,160,214,0.06);
+    background:rgba(122,95,140,0.06);
   }
   .col-sort-select{
     width:100%;
@@ -241,7 +241,7 @@
   }
   .claimed-badge{
     display:inline-block;
-    margin:8px 0 0 16px;
+    margin:8px 0 0 0;
     font-family:'IBM Plex Mono',monospace;
     font-size:10px;
     text-transform:uppercase;
@@ -293,7 +293,7 @@
     display:flex;
     flex-wrap:wrap;
     gap:5px;
-    margin:6px 0 0 16px;
+    margin:6px 0 0 0;
   }
   .utag{
     font-family:'IBM Plex Mono',monospace;
@@ -305,7 +305,7 @@
   }
   .utag.src{
     color:var(--postings);
-    background:rgba(184,160,214,0.16);
+    background:rgba(122,95,140,0.16);
   }
 
   .bulkbar{
@@ -324,7 +324,7 @@
   .bulkbar .count{ font-weight:600; }
   .bulkbar .spacer{ flex:1; }
 
-  .card.selectable::before{ display:none; }
+  .card.selectable .accent-dot{ display:none; }
   .select-mark{
     position:absolute;
     top:9px;
@@ -376,13 +376,13 @@
   }
   .column.shared{
     border-style:solid;
-    border-color:rgba(184,160,214,0.4);
+    border-color:rgba(122,95,140,0.4);
     background:
-      linear-gradient(rgba(184,160,214,0.07), rgba(184,160,214,0.07)),
+      linear-gradient(rgba(122,95,140,0.07), rgba(122,95,140,0.07)),
       var(--panel);
   }
   .column.shared .col-tab{
-    background:rgba(184,160,214,0.08);
+    background:rgba(122,95,140,0.08);
   }
   .column.drag-over{ border-color:var(--brass); }
   .col-tab{
@@ -429,15 +429,15 @@
     display:flex;
     flex-direction:column;
     background:
-      linear-gradient(rgba(184,160,214,0.07), rgba(184,160,214,0.07)),
+      linear-gradient(rgba(122,95,140,0.07), rgba(122,95,140,0.07)),
       var(--panel);
-    border:1px solid rgba(184,160,214,0.4);
+    border:1px solid rgba(122,95,140,0.4);
     border-radius:4px;
     overflow:hidden;
   }
   .postings-view-main .col-tab{ --accent: var(--postings); flex-shrink:0; }
   .postings-view-main .col-subbar{
-    background:rgba(184,160,214,0.06);
+    background:rgba(122,95,140,0.06);
     flex-shrink:0;
     flex-direction:row;
     align-items:center;
@@ -492,18 +492,29 @@
 
   .card{
     background:var(--panel-2);
-    border:1px solid var(--hairline);
+    border:none;
     border-radius:3px;
     padding:11px 12px 12px;
     position:relative;
+    z-index:0;
     cursor:grab;
+    mask-image: linear-gradient(to bottom, black 0%, black 87.5%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 87.5%, transparent 100%);
+  }
+  .card-border-fx{
+    position:absolute;
+    inset:-1px;
+    background:var(--accent, var(--hairline));
+    opacity:0.55;
+    z-index:-1;
+    border-radius:4px;
+    pointer-events:none;
   }
   .card:active{ cursor:grabbing; }
   .card.dragging{ opacity:0.4; }
   .card.drop-before{ box-shadow: inset 0 2px 0 0 var(--brass); }
   .card.drop-after{ box-shadow: inset 0 -2px 0 0 var(--brass); }
-  .card::before{
-    content:"";
+  .accent-dot{
     position:absolute;
     top:9px;
     left:9px;
@@ -512,29 +523,53 @@
     border-radius:50%;
     background:var(--accent);
   }
+  .card-body{
+    margin-top:10px;
+    padding:9px 11px 11px;
+    background:rgba(0,0,0,0.24);
+    border-radius:4px;
+  }
   .card .company{
     font-family:'Fraunces',serif;
-    font-size:15.5px;
+    font-size:18px;
     font-weight:500;
-    margin:0 0 2px 16px;
-    line-height:1.3;
+    margin:10px 0 3px 0;
+    line-height:1.25;
+    text-shadow:0 2px 4px rgba(0,0,0,0.6);
   }
   .posting-link{
     display:block;
     color:inherit;
     text-decoration:none;
-    margin:0 0 8px 16px;
-    padding:7px 10px;
-    border:1px solid rgba(201,163,93,0.4);
-    border-radius:5px;
-    background:rgba(201,163,93,0.08);
+    margin:10px 0 8px 0;
+    padding:11px 15px;
+    border:none;
+    background:rgba(201,163,93,0.4);
+    position:relative;
+    z-index:0;
+    filter: drop-shadow(0 5px 10px rgba(0,0,0,0.65));
+  }
+  .link-border-fx{
+    position:absolute;
+    inset:-1px;
+    background:rgba(201,163,93,0.4);
+    z-index:-1;
+    pointer-events:none;
   }
   .posting-link:hover{
-    border-color:var(--brass);
-    background:rgba(201,163,93,0.18);
+    background:rgba(201,163,93,0.6);
   }
-  .card .posting-link .company{ margin:0 0 2px 0; }
-  .card .posting-link .role{ margin:0; }
+  .posting-link:hover .link-border-fx{
+    background:rgba(201,163,93,0.6);
+  }
+  .card .posting-link .company{
+    margin:0 0 2px 0;
+    text-shadow: 0 2px 3px rgba(0,0,0,0.85), 0 -1px 0 rgba(255,255,255,0.08);
+  }
+  .card .posting-link .role{
+    margin:0;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.75), 0 -1px 0 rgba(255,255,255,0.06);
+  }
   .posting-link-hint{
     display:flex;
     align-items:center;
@@ -549,28 +584,30 @@
   .card .role{
     font-size:12.5px;
     color:var(--paper-dim);
-    margin:0 0 8px 16px;
+    margin:0 0 8px 0;
+    text-shadow:0 1px 3px rgba(0,0,0,0.5);
   }
-  .card .meta{
+  .card .details{
     display:flex;
     flex-wrap:wrap;
     gap:6px;
-    margin-left:16px;
   }
-  .tag{
+  .detail{
     font-family:'IBM Plex Mono',monospace;
     font-size:10.5px;
     color:var(--paper-dim);
-    border:1px solid var(--hairline);
+    border:none;
+    background:rgba(0,0,0,0.24);
     border-radius:2px;
     padding:1px 6px;
   }
 
   .notes-wrap{
     position:relative;
-    margin:8px 0 0 16px;
+    margin:8px 0 0 0;
     cursor:help;
   }
+  .card-body .notes-wrap{ margin-top:0; }
   .notes-preview{
     font-size:12px;
     color:var(--paper-dim);
@@ -580,9 +617,10 @@
   .card .notes{
     font-size:12px;
     color:var(--paper-dim);
-    margin:8px 0 0 16px;
+    margin:8px 0 0 0;
     line-height:1.4;
   }
+  .card-body .notes{ margin-top:0; }
   .notes-tooltip{
     display:none;
     position:fixed;
@@ -645,9 +683,9 @@
   .card[data-col="postings"]{
     --accent: var(--postings);
     background:
-      linear-gradient(rgba(184,160,214,0.08), rgba(184,160,214,0.08)),
+      linear-gradient(rgba(122,95,140,0.08), rgba(122,95,140,0.08)),
       var(--panel-2);
-    border-color:rgba(184,160,214,0.3);
+    border-color:rgba(122,95,140,0.3);
   }
   .card[data-col="hopper"]{ --accent: var(--hopper); }
   .card[data-col="applied"]{ --accent: var(--applied); }
@@ -1668,8 +1706,78 @@ function renderNotesBlock(notes){
   </div>`;
 }
 
+// Cards get their corner clipped along the hypotenuse of an isosceles right
+// triangle whose legs are 1/8 of the card's own width — a true width-relative
+// cut, not a fixed guess, so it has to be computed once the card's actual
+// rendered width is known. A shared observer (reset each render) also keeps
+// .card-border-fx in sync with the same clip shape, since clip-path on a
+// ::pseudo can't be set from JS the way it can on a real element.
+//
+// The link box itself is square-cornered (no clip) and deliberately stops
+// at 7/8 of the card's width — exactly where the card's own cut begins —
+// so the notch is always blank space next to it, never covered or clipped
+// by the link box itself.
+const clipResizeObserver = new ResizeObserver(entries=>{
+  entries.forEach(entry=>{
+    const el = entry.target;
+    if(!el.classList.contains('card')) return;
+    const w = entry.contentRect.width;
+    const cut = Math.max(0, w / 8);
+    const poly = `polygon(0 0, calc(100% - ${cut}px) 0, 100% ${cut}px, 100% 100%, 0 100%)`;
+    el.style.clipPath = poly;
+    const fx = el.querySelector(':scope > .card-border-fx');
+    if(fx) fx.style.clipPath = poly;
+
+    const cardStyle = getComputedStyle(el);
+    const padLeft = parseFloat(cardStyle.paddingLeft) || 0;
+    const padRight = parseFloat(cardStyle.paddingRight) || 0;
+
+    const nameplate = el.querySelector(':scope > .posting-link');
+    if(nameplate){
+      // Right edge lands at 7/8 of the card's full width, measured from the
+      // card's own left edge — same x-position where the card's clip starts.
+      const npWidth = Math.max(0, (w * 0.875) - padLeft);
+      nameplate.style.width = npWidth + 'px';
+      // Only the top-right corner clipped now — left edge and bottom-right
+      // both stay square. A finer 1/16-of-width equilateral cut — subtler
+      // than the card's own 1/8 cut, measured against the nameplate's own
+      // (narrower) width.
+      const npCut = Math.max(0, npWidth / 16);
+      const npPoly = `polygon(0 0, calc(100% - ${npCut}px) 0, 100% ${npCut}px, 100% 100%, 0 100%)`;
+      nameplate.style.clipPath = npPoly;
+      const npFx = nameplate.querySelector(':scope > .link-border-fx');
+      if(npFx) npFx.style.clipPath = npPoly;
+
+      // Top-align the Hopper select checkbox (and the colored type dot,
+      // on non-selectable cards) with the nameplate's own top edge, when
+      // a nameplate is present — measured from real rendered positions
+      // rather than computed offsets, since the nameplate's height and
+      // position vary with its content.
+      const cardRect = el.getBoundingClientRect();
+      const npRect = nameplate.getBoundingClientRect();
+      const npTopOffset = npRect.top - cardRect.top;
+
+      const selectMark = el.querySelector(':scope > .select-mark');
+      if(selectMark) selectMark.style.top = npTopOffset + 'px';
+
+      const dot = el.querySelector(':scope > .accent-dot');
+      if(dot) dot.style.top = npTopOffset + 'px';
+    }
+
+    // The edit button always nestles into the card's own clipped notch now
+    // (the link box, when present, stops short of that area entirely).
+    const actions = el.querySelector(':scope > .card-actions');
+    if(actions){
+      const d = cut / 2; // centroid-ish: halfway into the triangular notch
+      actions.style.top = d + 'px';
+      actions.style.right = d + 'px';
+    }
+  });
+});
+
 function render(){
   const board = document.getElementById('board');
+  clipResizeObserver.disconnect();
   board.innerHTML = '';
   board.classList.toggle('postings-mode', currentView === 'postings');
   const statsEl = document.getElementById('stats');
@@ -1717,9 +1825,9 @@ function render(){
     cardEl.draggable = true;
     cardEl.dataset.id = card.id;
     const tags = [];
-    if(card.location) tags.push(`<span class="tag">${escapeHtml(card.location)}</span>`);
-    if(card.salary) tags.push(`<span class="tag">${escapeHtml(card.salary)}</span>`);
-    if(card.date) tags.push(`<span class="tag">${fmtDate(card.date)}</span>`);
+    if(card.location) tags.push(`<span class="detail">${escapeHtml(card.location)}</span>`);
+    if(card.salary) tags.push(`<span class="detail">${escapeHtml(card.salary)}</span>`);
+    if(card.date) tags.push(`<span class="detail">${fmtDate(card.date)}</span>`);
     const userTags = (card.tags || []).map(t=>{
       const isSrc = t.startsWith('from:');
       return `<span class="utag${isSrc ? ' src' : ''}">${escapeHtml(t)}</span>`;
@@ -1738,21 +1846,24 @@ function render(){
         : (col.key === 'passed' ? 'Ghosted' : 'Discarded');
     }
     cardEl.innerHTML = `
+      <div class="card-border-fx"></div>
+      <span class="accent-dot"></span>
       ${selectable ? `<span class="select-mark">${selectedIds.has(card.id) ? '✓' : ''}</span>` : ''}
       <div class="card-actions">
         <button class="icon-btn edit-btn" title="Edit">✎</button>
       </div>
       ${card.url ? `
       <a href="${escapeAttr(card.url)}" target="_blank" class="posting-link">
+        <div class="link-border-fx"></div>
         <p class="company">${escapeHtml(card.company || 'Unknown company')}</p>
         <p class="role">${escapeHtml(card.role || '')}</p>
         <span class="posting-link-hint">↗ View posting</span>
       </a>` : `
       <p class="company">${escapeHtml(card.company || 'Unknown company')}</p>
       <p class="role">${escapeHtml(card.role || '')}</p>`}
-      <div class="meta">${tags.join('')}</div>
+      <div class="details">${tags.join('')}</div>
       ${userTags ? `<div class="utags">${userTags}</div>` : ''}
-      ${card.notes ? renderNotesBlock(card.notes) : ''}
+      ${card.notes ? `<div class="card-body">${renderNotesBlock(card.notes)}</div>` : ''}
       ${isClaimed ? `<span class="claimed-badge">Already in your Hopper</span>` : ''}
       ${col.shared && !isClaimed ? `<button class="pull-btn" data-pull="${card.id}">Pull to my Hopper</button>` : ''}
     `;
@@ -1845,6 +1956,7 @@ function render(){
       if(draggedId === card.id) return;
       moveCardTo(draggedId, col.key, card.id, before);
     });
+    clipResizeObserver.observe(cardEl);
     return cardEl;
   }
 
