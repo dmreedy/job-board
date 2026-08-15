@@ -586,6 +586,7 @@
     align-items:center;
     gap:4px;
     margin-top:6px;
+    margin-bottom:4px;
     font-family:'IBM Plex Mono',monospace;
     font-size:10px;
     text-transform:uppercase;
@@ -602,6 +603,7 @@
     display:flex;
     flex-wrap:wrap;
     gap:6px;
+    margin-top:10px;
   }
   .detail{
     font-family:'IBM Plex Mono',monospace;
@@ -1757,11 +1759,11 @@ const clipResizeObserver = new ResizeObserver(entries=>{
     const nameplate = el.querySelector(':scope > .posting-link');
     let npCut = 0;
     if(nameplate){
-      // Right edge lands at 17/18 of the card's full width, measured from
+      // Right edge lands at 23/24 of the card's full width, measured from
       // the card's own left edge — a fixed proportion of the card, set
       // explicitly here rather than sized to fit the company/role text,
       // so it stays the same length regardless of content.
-      const npWidth = Math.max(0, (w * (17/18)) - padLeft);
+      const npWidth = Math.max(0, (w * (23/24)) - padLeft);
       nameplate.style.width = npWidth + 'px';
       // Only the top-right corner clipped — left edge and bottom-right
       // both stay square. Same 1/8-of-width cut as the card's own clip,
