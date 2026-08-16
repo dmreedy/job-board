@@ -497,8 +497,21 @@
     position:relative;
     z-index:0;
     cursor:grab;
-    mask-image: linear-gradient(to bottom, black 0%, black 87.5%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 87.5%, transparent 100%);
+  }
+  /* Carries the fade instead of .card itself — .pull-btn deliberately sits
+     outside this wrapper (see template) so it stays fully opaque even in
+     the faded zone, since mask-image affects an element's whole subtree
+     as one group and there's no way to exempt a child from it otherwise. */
+  .card-fade-wrap{
+    display:block;
+    mask-image: linear-gradient(to bottom, black 0%, black 75%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 75%, transparent 100%);
+  }
+  .nameplate-rule{
+    height:1px;
+    background:var(--brass);
+    opacity:0.6;
+    margin:10px 0;
   }
   .card-bg-fx{
     position:absolute;
@@ -507,6 +520,8 @@
     z-index:-2;
     border-radius:3px;
     pointer-events:none;
+    mask-image: linear-gradient(to bottom, black 0%, black 75%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 75%, transparent 100%);
   }
   .card-border-fx{
     position:absolute;
@@ -516,6 +531,8 @@
     z-index:-1;
     border-radius:4px;
     pointer-events:none;
+    mask-image: linear-gradient(to bottom, black 0%, black 75%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 75%, transparent 100%);
   }
   .card:active{ cursor:grabbing; }
   .card.dragging{ opacity:0.4; }
@@ -1765,9 +1782,9 @@ const clipResizeObserver = new ResizeObserver(entries=>{
     const w = el.getBoundingClientRect().width;
     const cut = Math.max(0, w / 8);
     const poly = `polygon(0 0, calc(100% - ${cut}px) 0, 100% ${cut}px, 100% 100%, 0 100%)`;
-    const bgFx = el.querySelector(':scope > .card-bg-fx');
+    const bgFx = el.querySelector('.card-bg-fx');
     if(bgFx) bgFx.style.clipPath = poly;
-    const fx = el.querySelector(':scope > .card-border-fx');
+    const fx = el.querySelector('.card-border-fx');
     if(fx) fx.style.clipPath = poly;
 
     const cardStyle = getComputedStyle(el);
@@ -1778,7 +1795,7 @@ const clipResizeObserver = new ResizeObserver(entries=>{
     // card's — the pen button then sits on the card, in the triangular
     // space that clip exposes (the nameplate's own background doesn't
     // cover that corner, so the card shows through underneath it).
-    const nameplate = el.querySelector(':scope > .posting-link');
+    const nameplate = el.querySelector('.posting-link');
     let npCut = 0;
     if(nameplate){
       // Right edge lands at 23/24 of the card's full width, measured from
@@ -1804,11 +1821,15 @@ const clipResizeObserver = new ResizeObserver(entries=>{
       // width, which is further right than where the nameplate itself
       // stops — match them to the nameplate's actual width so all their
       // right edges align, rather than each section stopping wherever its
-      // own default sizing happens to land.
-      ['.details', '.utags', '.card-body', '.pull-btn'].forEach(sel=>{
-        const target = el.querySelector(`:scope > ${sel}`);
+      // own default sizing happens to land. pull-btn lives outside
+      // .card-fade-wrap now (see template — it's exempt from the fade),
+      // so it needs its own direct-child lookup rather than the rest.
+      ['.details', '.utags', '.card-body', '.nameplate-rule'].forEach(sel=>{
+        const target = el.querySelector(sel);
         if(target) target.style.width = npWidth + 'px';
       });
+      const pullBtn = el.querySelector(':scope > .pull-btn');
+      if(pullBtn) pullBtn.style.width = npWidth + 'px';
     }
 
     // Vertically center the Hopper select checkbox (and the colored type
@@ -1821,12 +1842,12 @@ const clipResizeObserver = new ResizeObserver(entries=>{
       const companyCenterY = companyRect.top + companyRect.height / 2;
       // Each target's own height differs (dot vs. checkbox), so center
       // each individually rather than sharing one offset.
-      const selectMark = el.querySelector(':scope > .select-mark');
+      const selectMark = el.querySelector('.select-mark');
       if(selectMark){
         const smRect = selectMark.getBoundingClientRect();
         selectMark.style.top = (companyCenterY - cardRect.top - smRect.height / 2) + 'px';
       }
-      const dot = el.querySelector(':scope > .accent-dot');
+      const dot = el.querySelector('.accent-dot');
       if(dot){
         const dotRect = dot.getBoundingClientRect();
         dot.style.top = (companyCenterY - cardRect.top - dotRect.height / 2) + 'px';
@@ -1836,7 +1857,7 @@ const clipResizeObserver = new ResizeObserver(entries=>{
     // The edit button nestles into the nameplate's own clipped corner —
     // scaled down (see .card-actions CSS) so it actually fits the notch
     // instead of overflowing onto the nameplate's opaque area.
-    const actions = el.querySelector(':scope > .card-actions');
+    const actions = el.querySelector('.card-actions');
     if(actions && nameplate){
       const npRect = nameplate.getBoundingClientRect();
       const npTopInCard = npRect.top - cardRect.top;
@@ -1938,16 +1959,19 @@ function render(){
       <div class="card-actions">
         <button class="icon-btn edit-btn" title="Edit">✎</button>
       </div>
-      <${npTag} ${npAttrs} class="${npClass}">
-        <div class="link-border-fx"></div>
-        <p class="company">${escapeHtml(card.company || 'Unknown company')}</p>
-        <p class="role">${escapeHtml(card.role || '')}</p>
-        ${card.url ? `<span class="posting-link-hint">↗ View posting</span>` : ''}
-      </${npTag}>
-      <div class="details">${tags.join('')}</div>
-      ${userTags ? `<div class="utags">${userTags}</div>` : ''}
-      ${card.notes ? `<div class="card-body">${renderNotesBlock(card.notes)}</div>` : ''}
-      ${isClaimed ? `<span class="claimed-badge">Already in your Hopper</span>` : ''}
+      <div class="card-fade-wrap">
+        <${npTag} ${npAttrs} class="${npClass}">
+          <div class="link-border-fx"></div>
+          <p class="company">${escapeHtml(card.company || 'Unknown company')}</p>
+          <p class="role">${escapeHtml(card.role || '')}</p>
+          ${card.url ? `<span class="posting-link-hint">↗ View posting</span>` : ''}
+        </${npTag}>
+        <div class="nameplate-rule"></div>
+        <div class="details">${tags.join('')}</div>
+        ${userTags ? `<div class="utags">${userTags}</div>` : ''}
+        ${card.notes ? `<div class="card-body">${renderNotesBlock(card.notes)}</div>` : ''}
+        ${isClaimed ? `<span class="claimed-badge">Already in your Hopper</span>` : ''}
+      </div>
       ${col.shared && !isClaimed ? `<button class="pull-btn" data-pull="${card.id}">Pull to my Hopper</button>` : ''}
     `;
     if(selectable){
