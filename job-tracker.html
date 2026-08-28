@@ -260,16 +260,40 @@
 
   .filterbar{
     display:flex;
-    flex-wrap:wrap;
+    flex-wrap:nowrap;
+    overflow-x:auto;
     align-items:center;
     gap:7px;
     padding:14px 32px 0;
+    flex:1;
+    min-width:0;
+    scrollbar-width:thin;
+    scrollbar-color:var(--brass) transparent;
+  }
+  /* A thin hairline track with a small round brass thumb sitting on it —
+     "a dot moving along a line" — replacing the default browser scrollbar.
+     Firefox gets the plain thin/brass treatment above; this pseudo-element
+     styling covers Chrome/Edge/Safari, which support far more customization. */
+  .filterbar::-webkit-scrollbar{
+    height:12px;
+  }
+  .filterbar::-webkit-scrollbar-track{
+    background: linear-gradient(to bottom, transparent 45%, var(--hairline) 45%, var(--hairline) 55%, transparent 55%);
+  }
+  .filterbar::-webkit-scrollbar-thumb{
+    background:var(--brass);
+    border-radius:50%;
+    border:3px solid var(--bg);
+  }
+  .filterbar::-webkit-scrollbar-thumb:hover{
+    background:#dab472;
   }
   .filterbar .flabel{
     font-family:'IBM Plex Mono',monospace;
     font-size:11px;
     color:var(--paper-dim);
     margin-right:4px;
+    flex-shrink:0;
   }
   .ftag{
     font-family:'IBM Plex Mono',monospace;
@@ -280,6 +304,7 @@
     border-radius:12px;
     padding:3px 11px;
     cursor:pointer;
+    flex-shrink:0;
   }
   .ftag:hover{ border-color:var(--paper-dim); }
   .ftag.active{
@@ -306,6 +331,12 @@
   .utag.src{
     color:#c9b3da;
     background:rgba(122,95,140,0.28);
+  }
+  .utag.rejected{
+    color:#ff5c5c;
+    background:rgba(255,92,92,0.18);
+    border:1px solid rgba(255,92,92,0.4);
+    font-weight:700;
   }
 
   .bulkbar{
@@ -340,7 +371,8 @@
     font-size:9.5px;
     font-weight:700;
     color:#1b1e24;
-    pointer-events:none;
+    cursor:pointer;
+    z-index:6;
   }
   .card.selectable{ cursor:pointer; }
   .card.selectable:hover{ border-color:var(--brass-dim); }
@@ -549,7 +581,7 @@
   }
   .card-body{
     margin-top:10px;
-    padding:9px 11px 11px;
+    padding:9px 11px 22px;
     background:rgba(0,0,0,0.24);
     border-radius:4px;
   }
@@ -615,11 +647,11 @@
   .posting-link-hint{
     display:flex;
     align-items:center;
-    gap:4px;
-    margin-top:6px;
-    margin-bottom:4px;
+    gap:3px;
+    margin-top:4px;
+    margin-bottom:2px;
     font-family:'IBM Plex Mono',monospace;
-    font-size:10px;
+    font-size:8px;
     text-transform:uppercase;
     letter-spacing:0.05em;
     color:var(--brass);
@@ -681,16 +713,6 @@
     z-index:1000;
   }
 
-  .card-actions{
-    position:absolute;
-    top:8px;
-    right:8px;
-    display:flex;
-    gap:4px;
-    transform: scale(0.75);
-    transform-origin: top right;
-    z-index:5;
-  }
   .icon-btn{
     background:none;
     border:none;
@@ -701,10 +723,6 @@
     font-family:'IBM Plex Mono',monospace;
   }
   .icon-btn:hover{ color:var(--paper); }
-  .icon-btn.edit-btn{
-    font-size:18px;
-    padding:0;
-  }
   .pull-btn{
     display:block;
     width:100%;
@@ -768,6 +786,18 @@
     overflow-y:auto;
     padding:22px 24px 20px;
   }
+  #overlay .modal[data-col]{
+    background: color-mix(in srgb, var(--accent) 50%, var(--panel));
+    border:none;
+  }
+  #overlay .modal[data-col="postings"]{ --accent: var(--postings); }
+  #overlay .modal[data-col="hopper"]{ --accent: var(--hopper); }
+  #overlay .modal[data-col="applied"]{ --accent: var(--applied); }
+  #overlay .modal[data-col="interviewing"]{ --accent: var(--interviewing); }
+  #overlay .modal[data-col="offer"]{ --accent: var(--offer); }
+  #overlay .modal[data-col="closed"]{ --accent: var(--closed); }
+  #overlay .modal[data-col="passed"]{ --accent: var(--passed); }
+  #overlay .modal[data-col="discarded"]{ --accent: var(--discarded); }
   .modal h2{
     font-family:'Fraunces',serif;
     font-weight:500;
@@ -940,6 +970,14 @@
         <input id="f-date" type="date" />
       </div>
     </div>
+    <div class="field" id="f-rejection-field" style="display:none;">
+      <label>Reason for rejection</label>
+      <select id="f-rejection-reason">
+        <option value="RESUME SCREEN">Resume screen</option>
+        <option value="OTHER">Other</option>
+      </select>
+      <input id="f-rejection-other-text" placeholder="Describe the reason..." style="display:none; margin-top:6px;" />
+    </div>
     <div class="field">
       <label>Posting link</label>
       <input id="f-url" placeholder="https://..." />
@@ -1006,6 +1044,26 @@
       <div style="flex:1;"></div>
       <button class="btn" id="dialogCancelBtn">Cancel</button>
       <button class="btn primary" id="dialogOkBtn" style="margin-left:8px;">OK</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="rejectReasonOverlay">
+  <div class="modal" style="width:340px;">
+    <p style="font-size:13.5px; color:var(--paper); margin:0 0 14px; line-height:1.5;">Why is this job being rejected?</p>
+    <div id="rejectReasonChoices" style="display:flex; flex-direction:column; gap:8px;">
+      <button class="btn" id="rejectReasonResumeBtn" style="text-align:left; padding:10px 14px;">Resume screen</button>
+      <button class="btn" id="rejectReasonOtherBtn" style="text-align:left; padding:10px 14px;">Other</button>
+    </div>
+    <div id="rejectReasonOtherWrap" style="display:none;">
+      <div class="field">
+        <input id="rejectReasonOtherText" placeholder="Describe the reason..." />
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="rejectReasonBackBtn">Back</button>
+        <div style="flex:1;"></div>
+        <button class="btn primary" id="rejectReasonSubmitBtn">Save</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1431,6 +1489,53 @@ async function showAlertModal(message){
   await openDialogInternal({message, showInput:false, showCancel:false});
 }
 
+// A dedicated picker (Resume screen / Other) shown at the moment a card
+// is actually dropped into the Rejected column — deliberate choice to
+// interrupt the drag here rather than defer to the edit modal, per
+// explicit request. Choosing Other reveals a text field for a custom
+// reason rather than resolving immediately, producing a value like
+// "OTHER: <what they typed>" (or plain "OTHER" if left blank) — the
+// "OTHER" prefix stays stable so these still group together as a family
+// of reasons rather than each becoming a wholly distinct one-off tag.
+// No cancel option: the card has already landed in Rejected by the time
+// this shows, so a reason is always picked.
+let rejectReasonResolve = null;
+function askRejectionReason(){
+  return new Promise(resolve=>{
+    rejectReasonResolve = resolve;
+    document.getElementById('rejectReasonChoices').style.display = 'flex';
+    document.getElementById('rejectReasonOtherWrap').style.display = 'none';
+    document.getElementById('rejectReasonOtherText').value = '';
+    document.getElementById('rejectReasonOverlay').classList.add('open');
+  });
+}
+function resolveRejectReason(value){
+  document.getElementById('rejectReasonOverlay').classList.remove('open');
+  if(rejectReasonResolve){
+    const r = rejectReasonResolve;
+    rejectReasonResolve = null;
+    r(value);
+  }
+}
+document.getElementById('rejectReasonResumeBtn').addEventListener('click', ()=> resolveRejectReason('RESUME SCREEN'));
+document.getElementById('rejectReasonOtherBtn').addEventListener('click', ()=>{
+  document.getElementById('rejectReasonChoices').style.display = 'none';
+  document.getElementById('rejectReasonOtherWrap').style.display = 'block';
+  setTimeout(()=> document.getElementById('rejectReasonOtherText').focus(), 30);
+});
+document.getElementById('rejectReasonBackBtn').addEventListener('click', ()=>{
+  document.getElementById('rejectReasonChoices').style.display = 'flex';
+  document.getElementById('rejectReasonOtherWrap').style.display = 'none';
+});
+function submitRejectReasonOther(){
+  const text = document.getElementById('rejectReasonOtherText').value.trim();
+  resolveRejectReason(text ? `OTHER: ${text}` : 'OTHER');
+}
+document.getElementById('rejectReasonSubmitBtn').addEventListener('click', submitRejectReasonOther);
+document.getElementById('rejectReasonOtherText').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){ e.preventDefault(); submitRejectReasonOther(); }
+});
+
 // Combined first-run modal: collects a name (required), and optionally sync
 // details if sync isn't already configured on this device. Resolves with
 // {name, syncUrl, syncKey} once the person submits — a name is required,
@@ -1853,23 +1958,6 @@ const clipResizeObserver = new ResizeObserver(entries=>{
         dot.style.top = (companyCenterY - cardRect.top - dotRect.height / 2) + 'px';
       }
     }
-
-    // The edit button nestles into the nameplate's own clipped corner —
-    // scaled down (see .card-actions CSS) so it actually fits the notch
-    // instead of overflowing onto the nameplate's opaque area.
-    const actions = el.querySelector('.card-actions');
-    if(actions && nameplate){
-      const npRect = nameplate.getBoundingClientRect();
-      const npTopInCard = npRect.top - cardRect.top;
-      const npRightGapInCard = cardRect.right - npRect.right;
-      // Positioned exactly where the nameplate's own top-right corner
-      // would sit if it weren't clipped — since the clip removes the
-      // nameplate's material at precisely that point, anchoring here is
-      // what makes the button read as sitting on the card underneath,
-      // rather than on the nameplate itself.
-      actions.style.top = npTopInCard + 'px';
-      actions.style.right = npRightGapInCard + 'px';
-    }
   });
 });
 
@@ -1928,7 +2016,8 @@ function render(){
     if(card.date) tags.push(`<span class="detail">${fmtDate(card.date)}</span>`);
     const userTags = (card.tags || []).map(t=>{
       const isSrc = t.startsWith('from:');
-      return `<span class="utag${isSrc ? ' src' : ''}">${escapeHtml(t)}</span>`;
+      const isRejectedTag = t.startsWith('REJECTED:');
+      return `<span class="utag${isSrc ? ' src' : ''}${isRejectedTag ? ' rejected' : ''}">${escapeHtml(t)}</span>`;
     }).join('');
     const selectable = col.key === 'hopper';
     if(selectable) cardEl.classList.add('selectable');
@@ -1945,9 +2034,8 @@ function render(){
     }
     // Always render the nameplate structure, even with no URL — an
     // invisible-styled <div> instead of a real <a>. Keeping the geometry
-    // (width, clip, notch) identical either way is what lets the edit
-    // button and dot/checkbox align consistently on every card, not just
-    // ones with an actual link.
+    // (width, clip, notch) identical either way keeps the dot/checkbox
+    // alignment consistent on every card, not just ones with a link.
     const npTag = card.url ? 'a' : 'div';
     const npAttrs = card.url ? `href="${escapeAttr(card.url)}" target="_blank"` : '';
     const npClass = card.url ? 'posting-link' : 'posting-link posting-link-empty';
@@ -1956,9 +2044,6 @@ function render(){
       <div class="card-border-fx"></div>
       <span class="accent-dot"></span>
       ${selectable ? `<span class="select-mark">${selectedIds.has(card.id) ? '✓' : ''}</span>` : ''}
-      <div class="card-actions">
-        <button class="icon-btn edit-btn" title="Edit">✎</button>
-      </div>
       <div class="card-fade-wrap">
         <${npTag} ${npAttrs} class="${npClass}">
           <div class="link-border-fx"></div>
@@ -1974,25 +2059,34 @@ function render(){
       </div>
       ${col.shared && !isClaimed ? `<button class="pull-btn" data-pull="${card.id}">Pull to my Hopper</button>` : ''}
     `;
-    if(selectable){
-      cardEl.addEventListener('click', (e)=>{
-        if(e.target.closest('a')) return;
-        const nowSelected = selectedIds.has(card.id);
-        if(nowSelected){
-          selectedIds.delete(card.id);
-        }else{
-          selectedIds.add(card.id);
-        }
-        cardEl.classList.toggle('selected', !nowSelected);
-        const mark = cardEl.querySelector('.select-mark');
-        if(mark) mark.textContent = !nowSelected ? '✓' : '';
-        renderBulkBar();
-      });
-    }
-    cardEl.querySelector('.edit-btn').addEventListener('click', (e)=>{
-      e.stopPropagation();
+
+    // Clicking anywhere on the card except the nameplate link opens the
+    // edit modal — this replaces the old dedicated edit button entirely.
+    // A genuine drag never fires a click event, so this coexists fine
+    // with drag-and-drop reordering between columns.
+    cardEl.addEventListener('click', (e)=>{
+      if(e.target.closest('a')) return;
+      if(e.target.closest('.select-mark')) return;
       openModal(card);
     });
+
+    if(selectable){
+      const mark = cardEl.querySelector('.select-mark');
+      if(mark){
+        mark.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          const nowSelected = selectedIds.has(card.id);
+          if(nowSelected){
+            selectedIds.delete(card.id);
+          }else{
+            selectedIds.add(card.id);
+          }
+          cardEl.classList.toggle('selected', !nowSelected);
+          mark.textContent = !nowSelected ? '✓' : '';
+          renderBulkBar();
+        });
+      }
+    }
     const pullBtn = cardEl.querySelector('[data-pull]');
     if(pullBtn){
       pullBtn.addEventListener('click', (e)=>{
@@ -2300,6 +2394,16 @@ async function pullToHopper(cardId){
   render();
 }
 
+// Applies the default REJECTED:RESUME SCREEN tag when a card is dragged
+// into the Rejected column — a drag shouldn't be interrupted by a dialog,
+// so this just sets the default; the actual reason (RESUME SCREEN vs
+// OTHER) is editable any time via the dropdown in the edit modal, which
+// is the "real" source of truth for this tag on every save.
+function setRejectionTag(card, reason){
+  const withoutOld = (card.tags || []).filter(t=>!t.startsWith('REJECTED:'));
+  card.tags = reason ? [...withoutOld, `REJECTED:${reason}`] : withoutOld;
+}
+
 async function moveCardTo(draggedId, targetColumnKey, targetId, before){
   const targetCol = COLUMNS.find(c=>c.key===targetColumnKey);
   const draggedCard = cards.find(c=>c.id===draggedId);
@@ -2319,6 +2423,10 @@ async function moveCardTo(draggedId, targetColumnKey, targetId, before){
       return;
     }
     const clone = { ...draggedCard, id: uid(), owner: currentUser, column: targetColumnKey, sourceId: draggedCard.id, updatedAt: Date.now() };
+    if(targetColumnKey === 'closed'){
+      const reason = await askRejectionReason();
+      setRejectionTag(clone, reason);
+    }
     cards.push(clone);
     columnSortMode[targetColumnKey] = 'manual';
     save();
@@ -2333,9 +2441,16 @@ async function moveCardTo(draggedId, targetColumnKey, targetId, before){
 
   const draggedIdx = cards.findIndex(c=>c.id===draggedId);
   if(draggedIdx === -1) return;
+  const wasAlreadyRejected = draggedCard.column === 'closed';
   const [movedCard] = cards.splice(draggedIdx, 1);
   movedCard.column = targetColumnKey;
   movedCard.updatedAt = Date.now();
+  if(targetColumnKey === 'closed' && !wasAlreadyRejected){
+    const reason = await askRejectionReason();
+    setRejectionTag(movedCard, reason);
+  }else if(targetColumnKey !== 'closed' && wasAlreadyRejected){
+    setRejectionTag(movedCard, null);
+  }
 
   if(targetId){
     let targetIdx = cards.findIndex(c=>c.id===targetId);
@@ -2360,8 +2475,48 @@ function escapeHtml(str){
 }
 function escapeAttr(str){ return escapeHtml(str); }
 
+function updateRejectionFieldVisibility(){
+  const isRejected = document.getElementById('f-column').value === 'closed';
+  document.getElementById('f-rejection-field').style.display = isRejected ? 'block' : 'none';
+}
+document.getElementById('f-column').addEventListener('change', updateRejectionFieldVisibility);
+
+function updateRejectionOtherVisibility(){
+  const isOther = document.getElementById('f-rejection-reason').value === 'OTHER';
+  document.getElementById('f-rejection-other-text').style.display = isOther ? 'block' : 'none';
+}
+document.getElementById('f-rejection-reason').addEventListener('change', updateRejectionOtherVisibility);
+
+// Clips the modal's own top-right corner the same way cards are clipped —
+// an isosceles right triangle whose legs are 1/8 of the modal's own
+// width. Computed from real measured width (not a fixed CSS percentage),
+// since the modal is much taller than it is wide — a percentage-based
+// clip would use a different absolute pixel value on each axis and
+// produce a skewed, non-45° cut rather than matching the card's angle.
+// Only applied when data-col is set (an existing card being edited);
+// a fresh/new entry stays a plain rectangle, no clip at all.
+function updateModalClip(){
+  const el = document.querySelector('#overlay .modal');
+  if(!el.hasAttribute('data-col')){
+    el.style.clipPath = 'none';
+    return;
+  }
+  const w = el.getBoundingClientRect().width;
+  const cut = Math.max(0, w / 8);
+  el.style.clipPath = `polygon(0 0, calc(100% - ${cut}px) 0, 100% ${cut}px, 100% 100%, 0 100%)`;
+}
+const modalClipObserver = new ResizeObserver(updateModalClip);
+modalClipObserver.observe(document.querySelector('#overlay .modal'));
+
 function openModal(card){
   editingId = card ? card.id : null;
+  const modalEl = document.querySelector('#overlay .modal');
+  if(card){
+    modalEl.setAttribute('data-col', card.column);
+  }else{
+    modalEl.removeAttribute('data-col');
+  }
+  updateModalClip();
   document.querySelector('#f-column option[value="hopper"]').textContent = hopperLabel();
   document.querySelector('#f-column option[value="discarded"]').textContent = discardedLabel();
   document.getElementById('modalTitle').textContent = card ? 'Edit entry' : 'New entry';
@@ -2372,9 +2527,25 @@ function openModal(card){
   document.getElementById('f-column').value = card ? card.column : 'postings';
   document.getElementById('f-date').value = card ? card.date || '' : new Date().toISOString().slice(0,10);
   document.getElementById('f-url').value = card ? card.url || '' : '';
-  document.getElementById('f-tags').value = card && card.tags ? card.tags.filter(t=>!t.startsWith('from:')).join(', ') : '';
+  const existingRejectedTag = card && card.tags ? card.tags.find(t=>t.startsWith('REJECTED:')) : null;
+  const existingReason = existingRejectedTag ? existingRejectedTag.slice('REJECTED:'.length) : 'RESUME SCREEN';
+  if(existingReason === 'RESUME SCREEN'){
+    document.getElementById('f-rejection-reason').value = 'RESUME SCREEN';
+    document.getElementById('f-rejection-other-text').value = '';
+  }else if(existingReason.startsWith('OTHER: ')){
+    document.getElementById('f-rejection-reason').value = 'OTHER';
+    document.getElementById('f-rejection-other-text').value = existingReason.slice('OTHER: '.length);
+  }else{
+    // Covers plain "OTHER" and any older-format value that doesn't match
+    // the current scheme — treated as Other with no further detail.
+    document.getElementById('f-rejection-reason').value = 'OTHER';
+    document.getElementById('f-rejection-other-text').value = '';
+  }
+  updateRejectionOtherVisibility();
+  document.getElementById('f-tags').value = card && card.tags ? card.tags.filter(t=>!t.startsWith('from:') && !t.startsWith('REJECTED:')).join(', ') : '';
   document.getElementById('f-notes').value = card ? card.notes || '' : '';
   document.getElementById('deleteBtn').style.display = card ? 'inline-block' : 'none';
+  updateRejectionFieldVisibility();
   document.getElementById('overlay').classList.add('open');
 }
 
@@ -2402,6 +2573,11 @@ document.getElementById('openAdd').addEventListener('click', ()=> openModal(null
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
 document.getElementById('overlay').addEventListener('click', (e)=>{
   if(e.target.id === 'overlay') closeModal();
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && document.getElementById('overlay').classList.contains('open')){
+    closeModal();
+  }
 });
 
 let searchDebounce;
@@ -2478,6 +2654,8 @@ function parsePosting(text, url){
 
 function openModalPrefill(data){
   editingId = null;
+  document.querySelector('#overlay .modal').removeAttribute('data-col');
+  updateModalClip();
   document.querySelector('#f-column option[value="hopper"]').textContent = hopperLabel();
   document.querySelector('#f-column option[value="discarded"]').textContent = discardedLabel();
   document.getElementById('modalTitle').textContent = 'New entry';
@@ -2488,9 +2666,13 @@ function openModalPrefill(data){
   document.getElementById('f-column').value = 'postings';
   document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
   document.getElementById('f-url').value = data.url || '';
+  document.getElementById('f-rejection-reason').value = 'RESUME SCREEN';
+  document.getElementById('f-rejection-other-text').value = '';
+  updateRejectionOtherVisibility();
   document.getElementById('f-tags').value = '';
   document.getElementById('f-notes').value = data.notes || '';
   document.getElementById('deleteBtn').style.display = 'none';
+  updateRejectionFieldVisibility();
   document.getElementById('overlay').classList.add('open');
 }
 
@@ -2557,10 +2739,16 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   const column = document.getElementById('f-column').value;
   const url = document.getElementById('f-url').value.trim();
   let tags = document.getElementById('f-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
-  tags = tags.filter(t=>!t.startsWith('from:'));
+  tags = tags.filter(t=>!t.startsWith('from:') && !t.startsWith('REJECTED:'));
   const src = sourceTagFromUrl(url);
   if(src) tags.push(src);
   if(currentUser) tags.push(`from:${currentUser}`);
+  if(column === 'closed'){
+    const selectedReason = document.getElementById('f-rejection-reason').value;
+    const otherText = document.getElementById('f-rejection-other-text').value.trim();
+    const reason = (selectedReason === 'OTHER' && otherText) ? `OTHER: ${otherText}` : selectedReason;
+    tags.push(`REJECTED:${reason}`);
+  }
 
   const data = {
     role: document.getElementById('f-role').value.trim(),
