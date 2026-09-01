@@ -338,7 +338,12 @@
     border:1px solid rgba(255,92,92,0.4);
     font-weight:700;
   }
-
+  .detail.reason-pill{
+    color:#ff5c5c;
+    background:rgba(255,92,92,0.18);
+    border:1px solid rgba(255,92,92,0.4);
+    font-weight:700;
+  }
   .bulkbar{
     display:flex;
     align-items:center;
@@ -2011,13 +2016,14 @@ function render(){
     cardEl.draggable = true;
     cardEl.dataset.id = card.id;
     const tags = [];
+    const reasonTag = (card.tags || []).find(t=>t.startsWith('REJECTED:') || t.startsWith('DISCARDED:'));
+    if(reasonTag) tags.push(`<span class="detail reason-pill">${escapeHtml(reasonTag)}</span>`);
     if(card.location) tags.push(`<span class="detail">${escapeHtml(card.location)}</span>`);
     if(card.salary) tags.push(`<span class="detail">${escapeHtml(card.salary)}</span>`);
     if(card.date) tags.push(`<span class="detail">${fmtDate(card.date)}</span>`);
-    const userTags = (card.tags || []).map(t=>{
+    const userTags = (card.tags || []).filter(t=>t!==reasonTag).map(t=>{
       const isSrc = t.startsWith('from:');
-      const isRejectedTag = t.startsWith('REJECTED:');
-      return `<span class="utag${isSrc ? ' src' : ''}${isRejectedTag ? ' rejected' : ''}">${escapeHtml(t)}</span>`;
+      return `<span class="utag${isSrc ? ' src' : ''}">${escapeHtml(t)}</span>`;
     }).join('');
     const selectable = col.key === 'hopper';
     if(selectable) cardEl.classList.add('selectable');
@@ -2404,6 +2410,23 @@ function setRejectionTag(card, reason){
   card.tags = reason ? [...withoutOld, `REJECTED:${reason}`] : withoutOld;
 }
 
+// Generic version for a simple prefixed tag (used by Discarded below) —
+// sets/clears a single tag matching the given prefix.
+function setPrefixedTag(card, prefix, value){
+  const withoutOld = (card.tags || []).filter(t=>!t.startsWith(prefix));
+  card.tags = value ? [...withoutOld, `${prefix}${value}`] : withoutOld;
+}
+
+// Discarded's reason is optional and free-text only (no quick-pick
+// options yet) — asks via the plain prompt dialog, and only adds the tag
+// if the person actually typed something; leaving it blank adds no tag
+// at all, rather than falling back to a generic placeholder like
+// Rejected's "OTHER" does.
+async function applyDiscardReason(card){
+  const reason = ((await askPrompt('Reason for discarding? (optional)')) || '').trim();
+  setPrefixedTag(card, 'DISCARDED:', reason);
+}
+
 async function moveCardTo(draggedId, targetColumnKey, targetId, before){
   const targetCol = COLUMNS.find(c=>c.key===targetColumnKey);
   const draggedCard = cards.find(c=>c.id===draggedId);
@@ -2426,6 +2449,8 @@ async function moveCardTo(draggedId, targetColumnKey, targetId, before){
     if(targetColumnKey === 'closed'){
       const reason = await askRejectionReason();
       setRejectionTag(clone, reason);
+    }else if(targetColumnKey === 'discarded'){
+      await applyDiscardReason(clone);
     }
     cards.push(clone);
     columnSortMode[targetColumnKey] = 'manual';
@@ -2442,6 +2467,7 @@ async function moveCardTo(draggedId, targetColumnKey, targetId, before){
   const draggedIdx = cards.findIndex(c=>c.id===draggedId);
   if(draggedIdx === -1) return;
   const wasAlreadyRejected = draggedCard.column === 'closed';
+  const wasAlreadyDiscarded = draggedCard.column === 'discarded';
   const [movedCard] = cards.splice(draggedIdx, 1);
   movedCard.column = targetColumnKey;
   movedCard.updatedAt = Date.now();
@@ -2450,6 +2476,11 @@ async function moveCardTo(draggedId, targetColumnKey, targetId, before){
     setRejectionTag(movedCard, reason);
   }else if(targetColumnKey !== 'closed' && wasAlreadyRejected){
     setRejectionTag(movedCard, null);
+  }
+  if(targetColumnKey === 'discarded' && !wasAlreadyDiscarded){
+    await applyDiscardReason(movedCard);
+  }else if(targetColumnKey !== 'discarded' && wasAlreadyDiscarded){
+    setPrefixedTag(movedCard, 'DISCARDED:', null);
   }
 
   if(targetId){
@@ -2542,7 +2573,7 @@ function openModal(card){
     document.getElementById('f-rejection-other-text').value = '';
   }
   updateRejectionOtherVisibility();
-  document.getElementById('f-tags').value = card && card.tags ? card.tags.filter(t=>!t.startsWith('from:') && !t.startsWith('REJECTED:')).join(', ') : '';
+  document.getElementById('f-tags').value = card && card.tags ? card.tags.filter(t=>!t.startsWith('from:') && !t.startsWith('REJECTED:') && !t.startsWith('DISCARDED:')).join(', ') : '';
   document.getElementById('f-notes').value = card ? card.notes || '' : '';
   document.getElementById('deleteBtn').style.display = card ? 'inline-block' : 'none';
   updateRejectionFieldVisibility();
@@ -2739,7 +2770,7 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   const column = document.getElementById('f-column').value;
   const url = document.getElementById('f-url').value.trim();
   let tags = document.getElementById('f-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
-  tags = tags.filter(t=>!t.startsWith('from:') && !t.startsWith('REJECTED:'));
+  tags = tags.filter(t=>!t.startsWith('from:') && !t.startsWith('REJECTED:') && !t.startsWith('DISCARDED:'));
   const src = sourceTagFromUrl(url);
   if(src) tags.push(src);
   if(currentUser) tags.push(`from:${currentUser}`);
@@ -2748,6 +2779,17 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
     const otherText = document.getElementById('f-rejection-other-text').value.trim();
     const reason = (selectedReason === 'OTHER' && otherText) ? `OTHER: ${otherText}` : selectedReason;
     tags.push(`REJECTED:${reason}`);
+  }
+  const priorCard = editingId ? cards.find(c=>c.id===editingId) : null;
+  const enteringDiscarded = column === 'discarded' && (!priorCard || priorCard.column !== 'discarded');
+  if(enteringDiscarded){
+    const reason = ((await askPrompt('Reason for discarding? (optional)')) || '').trim();
+    if(reason) tags.push(`DISCARDED:${reason}`);
+  }else if(column === 'discarded' && priorCard){
+    // Already discarded and re-saving for an unrelated edit — keep
+    // whatever reason it already had rather than re-prompting every time.
+    const existingDiscardTag = (priorCard.tags || []).find(t=>t.startsWith('DISCARDED:'));
+    if(existingDiscardTag) tags.push(existingDiscardTag);
   }
 
   const data = {
