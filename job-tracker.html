@@ -2009,7 +2009,10 @@ function render(){
 
   statsEl.innerHTML = COLUMNS.map(c=>{
     const n = poolFor(c).length;
-    return `<span><b>${n}</b> ${c.label.toLowerCase()}</span>`;
+    const label = c.key === 'hopper'
+      ? (currentUser ? `in ${currentUser}'s hopper` : 'in my hopper')
+      : c.label.toLowerCase();
+    return `<span><b>${n}</b> ${label}</span>`;
   }).join('');
 
   // Builds one fully-wired card element. Reused by both the normal narrow
