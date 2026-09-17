@@ -23,6 +23,7 @@
     --offer: #c9a35d;
     --closed: #a6543f;
     --passed: #756e63;
+    --expired: #8f7f4f;
     --discarded: #5c564c;
   }
   *{box-sizing:border-box;}
@@ -780,6 +781,7 @@
   .card[data-col="offer"]{ --accent: var(--offer); }
   .card[data-col="closed"]{ --accent: var(--closed); }
   .card[data-col="passed"]{ --accent: var(--passed); }
+  .card[data-col="expired"]{ --accent: var(--expired); }
   .card[data-col="discarded"]{ --accent: var(--discarded); }
 
   /* modal */
@@ -814,6 +816,7 @@
   #overlay .modal[data-col="offer"]{ --accent: var(--offer); }
   #overlay .modal[data-col="closed"]{ --accent: var(--closed); }
   #overlay .modal[data-col="passed"]{ --accent: var(--passed); }
+  #overlay .modal[data-col="expired"]{ --accent: var(--expired); }
   #overlay .modal[data-col="discarded"]{ --accent: var(--discarded); }
   .modal h2{
     font-family:'Fraunces',serif;
@@ -1140,6 +1143,29 @@
 </div>
 
 <script>
+// Catches any uncaught error or unhandled promise rejection anywhere in
+// the app and surfaces it visibly, instead of silently leaving a blank
+// board with zero trace of what happened. This is specifically for the
+// "sync completes but nothing renders" class of bug — if something in
+// load()/render() throws, this is what turns that from an invisible dead
+// end into an actual diagnosable message.
+function showFatalErrorBanner(details){
+  if(document.getElementById('fatalErrorBanner')) return; // don't stack duplicates
+  const banner = document.createElement('div');
+  banner.id = 'fatalErrorBanner';
+  banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#a6543f; color:#fff; padding:12px 20px; font-family:"IBM Plex Mono",monospace; font-size:12px; z-index:99999; white-space:pre-wrap; max-height:40vh; overflow-y:auto; box-shadow:0 2px 12px rgba(0,0,0,0.5);';
+  banner.textContent = 'Something went wrong and the board may not have rendered correctly. Reloading the page is recommended — please copy or screenshot this message first, it\'ll help track down the cause:\n\n' + details;
+  document.body.prepend(banner);
+}
+window.addEventListener('error', (e)=>{
+  console.error('Uncaught error:', e.error || e.message);
+  showFatalErrorBanner(e.error && e.error.stack ? e.error.stack : String(e.message || e));
+});
+window.addEventListener('unhandledrejection', (e)=>{
+  console.error('Unhandled promise rejection:', e.reason);
+  showFatalErrorBanner(e.reason && e.reason.stack ? e.reason.stack : String(e.reason));
+});
+
 const COLUMNS = [
   {key:'postings', label:'Postings', shared:true},
   {key:'hopper', label:'My Hopper'},
@@ -1148,6 +1174,7 @@ const COLUMNS = [
   {key:'offer', label:'Offer'},
   {key:'closed', label:'Rejected'},
   {key:'passed', label:'Ghosted'},
+  {key:'expired', label:'Expired'},
   {key:'discarded', label:'Discarded'}
 ];
 const STORAGE_KEY = 'job-tracker-cards';
@@ -1257,34 +1284,102 @@ function uid(){ return 'c' + Math.random().toString(36).slice(2,10); }
 // don't handle that preflight cleanly — so POST bodies are sent with the
 // browser's default text/plain content type. Apps Script's e.postData.contents
 // still gives the raw JSON string regardless of the declared MIME type.
-async function remoteFetchAll(){
+// Tracks the most recent sync failure's real diagnostic info (HTTP status,
+// raw response body) — surfaced via the sync status tooltip — since the
+// previous version discarded this the moment resp.json() threw on a
+// non-JSON response (rate-limit page, cold-start timeout, re-auth
+// redirect, etc.), leaving only a generic "sync failed" with nothing to
+// actually diagnose the next time it happens.
+let lastSyncError = null;
+
+function sleep(ms){ return new Promise(resolve=> setTimeout(resolve, ms)); }
+
+// Apps Script Web Apps are known to intermittently return a spurious
+// non-JSON error page (an edge/interstitial response, not anything from
+// the deployed script itself — Apps Script's own execution logs show
+// nothing, because the request never actually reached it) that resolves
+// itself on a bare retry. Rather than surfacing that as a failure and
+// making the person manually hit "Synchronize" a few times, both fetch
+// and push retry a couple of times with a short delay before actually
+// giving up. lastSyncError always reflects the *last* attempt's failure,
+// so retries never hide real, persistent errors from the diagnostic view.
+const SYNC_RETRY_DELAYS_MS = [600, 1500];
+
+async function remoteFetchAllOnce(){
   if(!syncUrl) return null;
   try{
     const resp = await fetch(`${syncUrl}?key=${encodeURIComponent(syncSecret || '')}`);
-    const data = await resp.json();
-    if(data.error) throw new Error(data.error);
-    if(!Array.isArray(data.cards) || !Array.isArray(data.users)) throw new Error('unexpected response shape');
+    const bodyText = await resp.text();
+    if(!resp.ok){
+      lastSyncError = `HTTP ${resp.status} on fetch: ${bodyText.slice(0,300)}`;
+      throw new Error(lastSyncError);
+    }
+    let data;
+    try{
+      data = JSON.parse(bodyText);
+    }catch(parseErr){
+      lastSyncError = `Non-JSON response on fetch (HTTP ${resp.status}): ${bodyText.slice(0,300)}`;
+      throw new Error(lastSyncError);
+    }
+    if(data.error){ lastSyncError = `Server error on fetch: ${data.error}`; throw new Error(lastSyncError); }
+    if(!Array.isArray(data.cards) || !Array.isArray(data.users)){
+      lastSyncError = 'Unexpected response shape on fetch (cards/users not arrays)';
+      throw new Error(lastSyncError);
+    }
+    lastSyncError = null;
     return data;
   }catch(e){
+    if(!lastSyncError) lastSyncError = `Network error on fetch: ${e.message || e}`;
     console.error('remote fetch failed', e);
     return null;
   }
 }
 
-async function remotePushAll(cardsArr, usersArr){
+async function remoteFetchAll(){
+  let result = await remoteFetchAllOnce();
+  for(let i=0; result===null && i<SYNC_RETRY_DELAYS_MS.length; i++){
+    await sleep(SYNC_RETRY_DELAYS_MS[i]);
+    result = await remoteFetchAllOnce();
+  }
+  return result;
+}
+
+async function remotePushAllOnce(cardsArr, usersArr){
   if(!syncUrl) return true; // no-op success when sync isn't configured
   try{
     const resp = await fetch(syncUrl, {
       method: 'POST',
       body: JSON.stringify({ key: syncSecret || '', cards: cardsArr, users: usersArr })
     });
-    const data = await resp.json();
-    if(data.error) throw new Error(data.error);
+    const bodyText = await resp.text();
+    if(!resp.ok){
+      lastSyncError = `HTTP ${resp.status} on push: ${bodyText.slice(0,300)}`;
+      throw new Error(lastSyncError);
+    }
+    let data;
+    try{
+      data = JSON.parse(bodyText);
+    }catch(parseErr){
+      lastSyncError = `Non-JSON response on push (HTTP ${resp.status}): ${bodyText.slice(0,300)}`;
+      throw new Error(lastSyncError);
+    }
+    if(data.error){ lastSyncError = `Server error on push: ${data.error}`; throw new Error(lastSyncError); }
+    lastSyncError = null;
     return true;
   }catch(e){
+    if(!lastSyncError) lastSyncError = `Network error on push: ${e.message || e}`;
     console.error('remote push failed', e);
     return false;
   }
+}
+
+async function remotePushAll(cardsArr, usersArr){
+  let ok = await remotePushAllOnce(cardsArr, usersArr);
+  for(let i=0; !ok && i<SYNC_RETRY_DELAYS_MS.length; i++){
+    await sleep(SYNC_RETRY_DELAYS_MS[i]);
+    ok = await remotePushAllOnce(cardsArr, usersArr);
+  }
+  return ok;
 }
 
 function setSyncIndicator(state){
@@ -1293,20 +1388,29 @@ function setSyncIndicator(state){
   if(!el) return;
   if(state === 'off'){
     el.textContent = '';
+    el.title = '';
+    el.style.cursor = 'default';
     return;
   }
   if(state === 'syncing'){
     el.textContent = 'syncing…';
     el.style.color = 'var(--paper-dim)';
+    el.title = '';
+    el.style.cursor = 'default';
     return;
   }
-  el.textContent = state === 'synced' ? 'synced' : 'sync failed';
+  el.textContent = state === 'synced' ? 'synced' : 'sync failed (tap for detail)';
   el.style.color = state === 'synced' ? 'var(--paper-dim)' : '#e0a292';
+  el.title = state === 'failed' ? (lastSyncError || 'Unknown error') : '';
+  el.style.cursor = state === 'failed' ? 'help' : 'default';
   if(state === 'synced'){
     clearTimeout(setSyncIndicator._t);
     setSyncIndicator._t = setTimeout(()=>{ el.textContent = ''; }, 1600);
   }
 }
+document.getElementById('syncState').addEventListener('click', ()=>{
+  if(lastSyncError) showAlertModal(`Last sync error:\n\n${lastSyncError}`);
+});
 
 let hasUnsyncedChanges = false;
 
@@ -1387,9 +1491,10 @@ const TOMBSTONE_GC_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const DECAY_ELIGIBLE_COLUMNS = new Set(['postings','hopper','applied','interviewing']);
 const DECAY_FULL_DAYS = 30; // fully "decayed" look by this many days untouched
 
-// Ghosted and Discarded are always shown fully decayed, regardless of age —
-// these columns represent "this is dead" as a category, not a gradient.
-const FULLY_DECAYED_COLUMNS = new Set(['passed','discarded']);
+// Ghosted, Expired, and Discarded are always shown fully decayed,
+// regardless of age — these columns represent "this is dead" as a
+// category, not a gradient.
+const FULLY_DECAYED_COLUMNS = new Set(['passed','expired','discarded']);
 
 function decayStyleFor(card, col, isClaimed){
   if(isClaimed) return null;
@@ -1409,13 +1514,16 @@ function decayStyleFor(card, col, isClaimed){
   };
 }
 
-// Merge remote + local by id, last-write-wins per card using updatedAt
-// (a newer tombstone beats an older live edit, and vice versa — deletion
-// is just another update, not a special case), then dedupe the shared
-// Postings pool and garbage-collect old tombstones. Users lists are unioned.
-function mergeCardsAndUsers(remoteCards, remoteUsers){
+// Pure core: takes everything it needs as arguments, touches no global
+// state, does no I/O — deterministic and directly testable. Last-write-wins
+// per card by updatedAt (a newer tombstone beats an older live edit, and
+// vice versa — deletion is just another update, not a special case), then
+// dedupe the shared Postings pool and garbage-collect old tombstones.
+// Users lists are unioned. `nowMs` is threaded through explicitly (rather
+// than calling Date.now() internally) so tests can pin it.
+function mergeCardsAndUsersPure(localCards, localUsers, remoteCards, remoteUsers, lastSyncAtCutoff, nowMs){
   const byId = new Map();
-  cards.forEach(c=> byId.set(c.id, c));
+  localCards.forEach(c=> byId.set(c.id, c));
   remoteCards.forEach(rc=>{
     const local = byId.get(rc.id);
     if(!local){
@@ -1429,19 +1537,28 @@ function mergeCardsAndUsers(remoteCards, remoteUsers){
   });
   let mergedCards = dedupePostings(Array.from(byId.values()));
   mergedCards = mergedCards.filter(c=>
-    !(c.deleted && (Date.now() - (c.updatedAt || 0)) > TOMBSTONE_GC_MS)
+    !(c.deleted && (nowMs - (c.updatedAt || 0)) > TOMBSTONE_GC_MS)
   );
-  const mergedUsers = Array.from(new Set([...users, ...remoteUsers]));
+  const mergedUsers = Array.from(new Set([...localUsers, ...remoteUsers]));
 
   // Anything touched (created, edited, moved) since our last sync gets
   // flagged for a visual highlight, then the cutoff advances to now.
-  recentlyChangedIds = new Set(
-    mergedCards.filter(c=> !c.deleted && (c.updatedAt||0) > lastSyncAt).map(c=>c.id)
+  const recentlyChanged = new Set(
+    mergedCards.filter(c=> !c.deleted && (c.updatedAt||0) > lastSyncAtCutoff).map(c=>c.id)
   );
+
+  return { cards: mergedCards, users: mergedUsers, recentlyChangedIds: recentlyChanged };
+}
+
+// Thin wrapper around the pure core: supplies the app's actual local
+// state, advances lastSyncAt, and persists it — this is what the rest of
+// the app calls; the pure core above is what tests call.
+function mergeCardsAndUsers(remoteCards, remoteUsers){
+  const result = mergeCardsAndUsersPure(cards, users, remoteCards, remoteUsers, lastSyncAt, Date.now());
+  recentlyChangedIds = result.recentlyChangedIds;
   lastSyncAt = Date.now();
   store.set(LAST_SYNC_KEY, String(lastSyncAt));
-
-  return { cards: mergedCards, users: mergedUsers };
+  return { cards: result.cards, users: result.users };
 }
 
 // In-app replacements for window.prompt/confirm/alert — native browser dialogs
@@ -2047,7 +2164,7 @@ function render(){
       cardEl.style.cssText += decay.style;
       cardEl.title = decay.days !== null
         ? `Last updated ${decay.days} day${decay.days===1?'':'s'} ago`
-        : (col.key === 'passed' ? 'Ghosted' : 'Discarded');
+        : col.label;
     }
     // Always render the nameplate structure, even with no URL — an
     // invisible-styled <div> instead of a real <a>. Keeping the geometry
@@ -3006,7 +3123,10 @@ document.getElementById('settingsClearBtn').addEventListener('click', async ()=>
 
 document.getElementById('syncBtn').addEventListener('click', synchronize);
 
-load();
+load().catch(e=>{
+  console.error('load() failed:', e);
+  showFatalErrorBanner(e && e.stack ? e.stack : String(e));
+});
 </script>
 
 </body>
