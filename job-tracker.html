@@ -1153,15 +1153,38 @@ function showFatalErrorBanner(details){
   if(document.getElementById('fatalErrorBanner')) return; // don't stack duplicates
   const banner = document.createElement('div');
   banner.id = 'fatalErrorBanner';
-  banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#a6543f; color:#fff; padding:12px 20px; font-family:"IBM Plex Mono",monospace; font-size:12px; z-index:99999; white-space:pre-wrap; max-height:40vh; overflow-y:auto; box-shadow:0 2px 12px rgba(0,0,0,0.5);';
-  banner.textContent = 'Something went wrong and the board may not have rendered correctly. Reloading the page is recommended — please copy or screenshot this message first, it\'ll help track down the cause:\n\n' + details;
+  banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#a6543f; color:#fff; padding:12px 40px 12px 20px; font-family:"IBM Plex Mono",monospace; font-size:12px; z-index:99999; white-space:pre-wrap; max-height:40vh; overflow-y:auto; box-shadow:0 2px 12px rgba(0,0,0,0.5);';
+  const textEl = document.createElement('span');
+  textEl.textContent = 'Something went wrong and the board may not have rendered correctly. Reloading the page is recommended — please copy or screenshot this message first, it\'ll help track down the cause:\n\n' + details;
+  banner.appendChild(textEl);
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '×';
+  closeBtn.title = 'Dismiss (the underlying issue may still need a reload to fully resolve)';
+  closeBtn.style.cssText = 'position:absolute; top:8px; right:12px; background:none; border:none; color:#fff; font-size:22px; line-height:1; cursor:pointer; padding:4px 8px;';
+  closeBtn.addEventListener('click', ()=> banner.remove());
+  banner.appendChild(closeBtn);
   document.body.prepend(banner);
 }
+// "ResizeObserver loop completed with undelivered notifications" (and the
+// similarly-worded "loop limit exceeded") is a browser-dispatched
+// diagnostic, not an application crash — it fires when a resize
+// observer's own work triggers further resizes within the same cycle.
+// The actual fix for that (deferring clipResizeObserver's DOM writes to
+// requestAnimationFrame) lives where that observer is defined; this
+// filter is defense-in-depth so the warning is never mistaken for a
+// fatal error even if it fires from somewhere else.
+function isBenignResizeObserverWarning(msg){
+  return typeof msg === 'string' && msg.includes('ResizeObserver loop');
+}
 window.addEventListener('error', (e)=>{
+  const msg = (e.error && e.error.message) || e.message || '';
+  if(isBenignResizeObserverWarning(msg)) return;
   console.error('Uncaught error:', e.error || e.message);
   showFatalErrorBanner(e.error && e.error.stack ? e.error.stack : String(e.message || e));
 });
 window.addEventListener('unhandledrejection', (e)=>{
+  const msg = (e.reason && e.reason.message) || String(e.reason || '');
+  if(isBenignResizeObserverWarning(msg)) return;
   console.error('Unhandled promise rejection:', e.reason);
   showFatalErrorBanner(e.reason && e.reason.stack ? e.reason.stack : String(e.reason));
 });
@@ -1232,7 +1255,10 @@ function renderFilterbar(){
   }
   bar.style.display = 'flex';
   bar.innerHTML = `<span class="flabel">Filter by tag</span>` +
-    tags.map(t=>`<button class="ftag${activeTagFilters.includes(t)?' active':''}" data-tag="${escapeAttr(t)}">${escapeHtml(t)}</button>`).join('') +
+    tags.map(t=>{
+      const ft = elideTagText(t);
+      return `<button class="ftag${activeTagFilters.includes(t)?' active':''}" data-tag="${escapeAttr(t)}"${ft.titleAttr}>${ft.display}</button>`;
+    }).join('') +
     (activeTagFilters.length ? `<button class="ftag clear" id="clearFilters">Clear</button>` : '');
 
   bar.querySelectorAll('.ftag[data-tag]').forEach(btn=>{
@@ -2006,88 +2032,102 @@ function renderNotesBlock(notes){
 // we want the nameplate free to render across that whole area. Clipping
 // only the background layers gives the same visual notch without also
 // constraining the content sitting on top of it.
+// Deferred to requestAnimationFrame rather than mutating synchronously
+// inside the observer callback: this callback measures a card, then
+// writes new widths to several of its children (nameplate, details,
+// notes, etc.). If that reflow changes one of those children's height,
+// it can cascade back into the card's own height changing — which
+// re-triggers this same observation within the same cycle, since the
+// card is what's being watched. That's a genuine feedback loop, not
+// just a spurious browser warning, and deferring the writes to the next
+// frame is the standard fix: it lets layout fully settle from whatever
+// triggered the resize before this callback makes any further changes,
+// rather than mutating and re-triggering synchronously.
 const clipResizeObserver = new ResizeObserver(entries=>{
   entries.forEach(entry=>{
     const el = entry.target;
     if(!el.classList.contains('card')) return;
-    // entry.contentRect excludes padding (it's the content-box size) — with
-    // 30px+12px of horizontal padding on this element, that silently
-    // shrank every proportion computed below. getBoundingClientRect gives
-    // the real border-box width instead.
-    const w = el.getBoundingClientRect().width;
-    const cut = Math.max(0, w / 8);
-    const poly = `polygon(0 0, calc(100% - ${cut}px) 0, 100% ${cut}px, 100% 100%, 0 100%)`;
-    const bgFx = el.querySelector('.card-bg-fx');
-    if(bgFx) bgFx.style.clipPath = poly;
-    const fx = el.querySelector('.card-border-fx');
-    if(fx) fx.style.clipPath = poly;
+    requestAnimationFrame(()=>{
+      if(!el.isConnected) return; // card may have been removed by a re-render before this frame ran
+      // entry.contentRect excludes padding (it's the content-box size) — with
+      // 30px+12px of horizontal padding on this element, that silently
+      // shrank every proportion computed below. getBoundingClientRect gives
+      // the real border-box width instead.
+      const w = el.getBoundingClientRect().width;
+      const cut = Math.max(0, w / 8);
+      const poly = `polygon(0 0, calc(100% - ${cut}px) 0, 100% ${cut}px, 100% 100%, 0 100%)`;
+      const bgFx = el.querySelector('.card-bg-fx');
+      if(bgFx) bgFx.style.clipPath = poly;
+      const fx = el.querySelector('.card-border-fx');
+      if(fx) fx.style.clipPath = poly;
 
-    const cardStyle = getComputedStyle(el);
-    const padLeft = parseFloat(cardStyle.paddingLeft) || 0;
+      const cardStyle = getComputedStyle(el);
+      const padLeft = parseFloat(cardStyle.paddingLeft) || 0;
 
-    // The nameplate structure always exists now (invisibly styled when
-    // there's no URL). It has its own top-right clip, same style as the
-    // card's — the pen button then sits on the card, in the triangular
-    // space that clip exposes (the nameplate's own background doesn't
-    // cover that corner, so the card shows through underneath it).
-    const nameplate = el.querySelector('.posting-link');
-    let npCut = 0;
-    if(nameplate){
-      // Right edge lands at 23/24 of the card's full width, measured from
-      // the card's own left edge, minus a small extra gap so the right
-      // side isn't flush against that boundary — balancing against the
-      // card's own generous left padding (30px vs. 12px on the right).
-      const npWidth = Math.max(0, (w * (23/24)) - padLeft - 18);
-      nameplate.style.width = npWidth + 'px';
-      // Only the top-right corner clipped — left edge and bottom-right
-      // both stay square. Same 1/8-of-width cut as the card's own clip,
-      // measured against the nameplate's own (narrower) width.
-      npCut = Math.max(0, npWidth / 8);
-      const npPoly = `polygon(0 0, calc(100% - ${npCut}px) 0, 100% ${npCut}px, 100% 100%, 0 100%)`;
-      nameplate.style.clipPath = npPoly;
-      const npFx = nameplate.querySelector(':scope > .link-border-fx');
-      if(npFx) npFx.style.clipPath = npPoly;
-      // Push the right padding in by the cut depth, so text content stops
-      // exactly where the diagonal starts rather than running up against
-      // (or under) the clipped corner.
-      nameplate.style.paddingRight = (npCut + 12) + 'px';
+      // The nameplate structure always exists now (invisibly styled when
+      // there's no URL). It has its own top-right clip, same style as the
+      // card's — the pen button then sits on the card, in the triangular
+      // space that clip exposes (the nameplate's own background doesn't
+      // cover that corner, so the card shows through underneath it).
+      const nameplate = el.querySelector('.posting-link');
+      let npCut = 0;
+      if(nameplate){
+        // Right edge lands at 23/24 of the card's full width, measured from
+        // the card's own left edge, minus a small extra gap so the right
+        // side isn't flush against that boundary — balancing against the
+        // card's own generous left padding (30px vs. 12px on the right).
+        const npWidth = Math.max(0, (w * (23/24)) - padLeft - 18);
+        nameplate.style.width = npWidth + 'px';
+        // Only the top-right corner clipped — left edge and bottom-right
+        // both stay square. Same 1/8-of-width cut as the card's own clip,
+        // measured against the nameplate's own (narrower) width.
+        npCut = Math.max(0, npWidth / 8);
+        const npPoly = `polygon(0 0, calc(100% - ${npCut}px) 0, 100% ${npCut}px, 100% 100%, 0 100%)`;
+        nameplate.style.clipPath = npPoly;
+        const npFx = nameplate.querySelector(':scope > .link-border-fx');
+        if(npFx) npFx.style.clipPath = npPoly;
+        // Push the right padding in by the cut depth, so text content stops
+        // exactly where the diagonal starts rather than running up against
+        // (or under) the clipped corner.
+        nameplate.style.paddingRight = (npCut + 12) + 'px';
 
-      // Everything below the nameplate defaults to the card's full content
-      // width, which is further right than where the nameplate itself
-      // stops — match them to the nameplate's actual width so all their
-      // right edges align, rather than each section stopping wherever its
-      // own default sizing happens to land. pull-btn lives outside
-      // .card-fade-wrap now (see template — it's exempt from the fade),
-      // so it needs its own direct-child lookup rather than the rest.
-      ['.details', '.utags', '.card-body', '.nameplate-rule'].forEach(sel=>{
-        const target = el.querySelector(sel);
-        if(target) target.style.width = npWidth + 'px';
-      });
-      const pullBtn = el.querySelector(':scope > .pull-btn');
-      if(pullBtn) pullBtn.style.width = npWidth + 'px';
-    }
-
-    // Vertically center the Hopper select checkbox (and the colored type
-    // dot, on non-selectable cards) against the company name text itself —
-    // not the nameplate's own padded box, which sits higher than the text.
-    const cardRect = el.getBoundingClientRect();
-    const companyEl = el.querySelector('.company');
-    if(companyEl){
-      const companyRect = companyEl.getBoundingClientRect();
-      const companyCenterY = companyRect.top + companyRect.height / 2;
-      // Each target's own height differs (dot vs. checkbox), so center
-      // each individually rather than sharing one offset.
-      const selectMark = el.querySelector('.select-mark');
-      if(selectMark){
-        const smRect = selectMark.getBoundingClientRect();
-        selectMark.style.top = (companyCenterY - cardRect.top - smRect.height / 2) + 'px';
+        // Everything below the nameplate defaults to the card's full content
+        // width, which is further right than where the nameplate itself
+        // stops — match them to the nameplate's actual width so all their
+        // right edges align, rather than each section stopping wherever its
+        // own default sizing happens to land. pull-btn lives outside
+        // .card-fade-wrap now (see template — it's exempt from the fade),
+        // so it needs its own direct-child lookup rather than the rest.
+        ['.details', '.utags', '.card-body', '.nameplate-rule'].forEach(sel=>{
+          const target = el.querySelector(sel);
+          if(target) target.style.width = npWidth + 'px';
+        });
+        const pullBtn = el.querySelector(':scope > .pull-btn');
+        if(pullBtn) pullBtn.style.width = npWidth + 'px';
       }
-      const dot = el.querySelector('.accent-dot');
-      if(dot){
-        const dotRect = dot.getBoundingClientRect();
-        dot.style.top = (companyCenterY - cardRect.top - dotRect.height / 2) + 'px';
+
+      // Vertically center the Hopper select checkbox (and the colored type
+      // dot, on non-selectable cards) against the company name text itself —
+      // not the nameplate's own padded box, which sits higher than the text.
+      const cardRect = el.getBoundingClientRect();
+      const companyEl = el.querySelector('.company');
+      if(companyEl){
+        const companyRect = companyEl.getBoundingClientRect();
+        const companyCenterY = companyRect.top + companyRect.height / 2;
+        // Each target's own height differs (dot vs. checkbox), so center
+        // each individually rather than sharing one offset.
+        const selectMark = el.querySelector('.select-mark');
+        if(selectMark){
+          const smRect = selectMark.getBoundingClientRect();
+          selectMark.style.top = (companyCenterY - cardRect.top - smRect.height / 2) + 'px';
+        }
+        const dot = el.querySelector('.accent-dot');
+        if(dot){
+          const dotRect = dot.getBoundingClientRect();
+          dot.style.top = (companyCenterY - cardRect.top - dotRect.height / 2) + 'px';
+        }
       }
-    }
+    });
   });
 });
 
@@ -2145,13 +2185,17 @@ function render(){
     cardEl.dataset.id = card.id;
     const tags = [];
     const reasonTag = (card.tags || []).find(t=>t.startsWith('REJECTED:') || t.startsWith('DISCARDED:'));
-    if(reasonTag) tags.push(`<span class="detail reason-pill">${escapeHtml(reasonTag)}</span>`);
+    if(reasonTag){
+      const rt = elideTagText(reasonTag);
+      tags.push(`<span class="detail reason-pill"${rt.titleAttr}>${rt.display}</span>`);
+    }
     if(card.location) tags.push(`<span class="detail">${escapeHtml(card.location)}</span>`);
     if(card.salary) tags.push(`<span class="detail">${escapeHtml(card.salary)}</span>`);
     if(card.date) tags.push(`<span class="detail">${fmtDate(card.date)}</span>`);
     const userTags = (card.tags || []).filter(t=>t!==reasonTag).map(t=>{
       const isSrc = t.startsWith('from:');
-      return `<span class="utag${isSrc ? ' src' : ''}">${escapeHtml(t)}</span>`;
+      const ut = elideTagText(t);
+      return `<span class="utag${isSrc ? ' src' : ''}"${ut.titleAttr}>${ut.display}</span>`;
     }).join('');
     const selectable = col.key === 'hopper';
     if(selectable) cardEl.classList.add('selectable');
@@ -2633,6 +2677,22 @@ function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 function escapeAttr(str){ return escapeHtml(str); }
+
+// Truncates a tag's DISPLAY text past 32 characters (with an ellipsis),
+// while keeping the full text available as a hover tooltip via `title`.
+// Used everywhere a tag/reason pill renders — the underlying value (used
+// for filtering, data-tag attributes, etc.) is never touched, only what's
+// shown on screen.
+function elideTagText(text, max=32){
+  const full = String(text);
+  if(full.length <= max){
+    return { display: escapeHtml(full), titleAttr: '' };
+  }
+  return {
+    display: escapeHtml(full.slice(0, max)) + '…',
+    titleAttr: ` title="${escapeAttr(full)}"`
+  };
+}
 
 function updateRejectionFieldVisibility(){
   const isRejected = document.getElementById('f-column').value === 'closed';
