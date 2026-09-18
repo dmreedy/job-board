@@ -82,6 +82,7 @@
     margin-left:20px;
   }
   .add-btn:hover{ background:#dab472; }
+  .add-btn:disabled{ opacity:0.4; cursor:default; pointer-events:none; }
   .entry-btn{ border-radius:999px; margin-left:0; }
   .entry-btn:first-child{ border-radius:999px 0 0 999px; }
   .entry-btn:last-child{ border-radius:0 999px 999px 0; }
@@ -923,6 +924,7 @@
   <div class="toprow">
     <div class="stats" id="stats"></div>
     <span id="saveState" style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim); min-width:70px;"></span>
+    <button class="add-btn" id="undoBtn" disabled title="Undo the last change" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline);">↶ Undo</button>
     <button class="add-btn" id="exportBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline);">Export</button>
     <button class="add-btn" id="importBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline);">Import</button>
     <input type="file" id="importFile" accept="application/json" style="display:none;" />
@@ -1220,6 +1222,45 @@ let hideClaimedPostings = true;
 let decayEnabled = true;
 let currentView = 'board'; // 'board' | 'postings'
 let lastSyncAt = 0;
+
+// Undo: a stack of full {cards, users} snapshots, deep-cloned so later
+// mutation of the live arrays can't reach back and corrupt a saved one.
+// Depth is just this one constant — bump UNDO_MAX_STEPS to keep more
+// history without changing anything else, since push/pop already treat
+// it as a generic stack rather than a single slot.
+const UNDO_MAX_STEPS = 1;
+let undoStack = [];
+
+function pushUndoSnapshot(){
+  undoStack.push({
+    cards: JSON.parse(JSON.stringify(cards)),
+    users: users.slice()
+  });
+  if(undoStack.length > UNDO_MAX_STEPS) undoStack.shift();
+  updateUndoUI();
+}
+
+function updateUndoUI(){
+  const btn = document.getElementById('undoBtn');
+  if(!btn) return;
+  btn.disabled = undoStack.length === 0;
+}
+
+async function performUndo(){
+  if(undoStack.length === 0) return;
+  const snapshot = undoStack.pop();
+  cards = snapshot.cards;
+  users = snapshot.users;
+  if(!currentUser || !users.includes(currentUser)){
+    currentUser = users[0] || null;
+    await saveCurrentUser();
+  }
+  await save();
+  await saveUsers();
+  updateUndoUI();
+  renderUserSelect();
+  render();
+}
 let recentlyChangedIds = new Set(); // cards touched since lastSyncAt, for highlighting
 let syncUrl = null;
 let syncSecret = null;
@@ -1904,6 +1945,7 @@ document.getElementById('userSelect').addEventListener('change', async (e)=>{
   if(e.target.value === '__add__'){
     const name = ((await askPrompt('Name of the new person:')) || '').trim();
     if(name && !users.includes(name)){
+      pushUndoSnapshot();
       users.push(name);
       await saveUsers();
     }
@@ -1929,9 +1971,10 @@ document.getElementById('deleteUserBtn').addEventListener('click', async ()=>{
   const name = currentUser;
   const ownedCount = liveCards().filter(c=>c.owner===name).length;
   const warn = ownedCount > 0
-    ? `Permanently delete "${name}"?\n\nThis will also permanently delete their ${ownedCount} personal card${ownedCount===1?'':'s'} (Hopper/Applied/etc.). This cannot be undone.`
+    ? `Permanently delete "${name}"?\n\nThis will also permanently delete their ${ownedCount} personal card${ownedCount===1?'':'s'} (Hopper/Applied/etc.). You can undo this immediately after, but not once you've made another change.`
     : `Permanently delete "${name}"?`;
   if(!(await askConfirm(warn))) return;
+  pushUndoSnapshot();
 
   cards.forEach(c=>{
     if(c.owner===name){
@@ -2518,6 +2561,7 @@ function renderBulkBar(){
 
 function moveSelectedToPostings(){
   if(selectedIds.size === 0) return;
+  pushUndoSnapshot();
   cards.forEach(c=>{
     if(selectedIds.has(c.id)){
       c.column = 'postings';
@@ -2533,7 +2577,8 @@ function moveSelectedToPostings(){
 async function deleteSelectedCards(){
   if(selectedIds.size === 0) return;
   const n = selectedIds.size;
-  if(!(await askConfirm(`Permanently delete ${n} selected card${n===1?'':'s'}? This cannot be undone.`))) return;
+  if(!(await askConfirm(`Permanently delete ${n} selected card${n===1?'':'s'}? You can undo this immediately after, but not once you've made another change.`))) return;
+  pushUndoSnapshot();
   cards.forEach(c=>{
     if(selectedIds.has(c.id)){
       c.deleted = true;
@@ -2567,6 +2612,7 @@ async function pullToHopper(cardId){
     sourceId: cardId,
     updatedAt: Date.now()
   };
+  pushUndoSnapshot();
   cards.push(clone);
   save();
   render();
@@ -2599,6 +2645,21 @@ async function applyDiscardReason(card){
   setPrefixedTag(card, 'DISCARDED:', reason);
 }
 
+// Inserts a card immediately before the first existing card belonging to
+// the given column (in the flat cards array), or at the very end if that
+// column has no cards yet. "Top" here means array position, which is
+// what manual sort mode actually displays — updated-desc mode ignores
+// array order entirely, so this only matters once/if the column is
+// switched to manual later.
+function insertAtTopOfColumn(card, columnKey){
+  const firstIdx = cards.findIndex(c=>c.column===columnKey);
+  if(firstIdx === -1){
+    cards.push(card);
+  }else{
+    cards.splice(firstIdx, 0, card);
+  }
+}
+
 async function moveCardTo(draggedId, targetColumnKey, targetId, before){
   const targetCol = COLUMNS.find(c=>c.key===targetColumnKey);
   const draggedCard = cards.find(c=>c.id===draggedId);
@@ -2617,6 +2678,7 @@ async function moveCardTo(draggedId, targetColumnKey, targetId, before){
       render();
       return;
     }
+    pushUndoSnapshot();
     const clone = { ...draggedCard, id: uid(), owner: currentUser, column: targetColumnKey, sourceId: draggedCard.id, updatedAt: Date.now() };
     if(targetColumnKey === 'closed'){
       const reason = await askRejectionReason();
@@ -2624,8 +2686,18 @@ async function moveCardTo(draggedId, targetColumnKey, targetId, before){
     }else if(targetColumnKey === 'discarded'){
       await applyDiscardReason(clone);
     }
-    cards.push(clone);
-    columnSortMode[targetColumnKey] = 'manual';
+    // A card moving in already sorts to the top naturally under
+    // updated-desc (its updatedAt is now the newest) — but that's only
+    // true while the column stays in that mode. Placing it first in the
+    // raw array too means it's still "at the top" if the column later
+    // gets switched to manual, rather than wherever it happened to land
+    // in the array. Any other sort mode keeps its existing behavior —
+    // append to the end, same as before.
+    if(columnSortMode[targetColumnKey] === 'updated-desc'){
+      insertAtTopOfColumn(clone, targetColumnKey);
+    }else{
+      cards.push(clone);
+    }
     save();
     render();
     return;
@@ -2638,6 +2710,7 @@ async function moveCardTo(draggedId, targetColumnKey, targetId, before){
 
   const draggedIdx = cards.findIndex(c=>c.id===draggedId);
   if(draggedIdx === -1) return;
+  pushUndoSnapshot();
   const wasAlreadyRejected = draggedCard.column === 'closed';
   const wasAlreadyDiscarded = draggedCard.column === 'discarded';
   const [movedCard] = cards.splice(draggedIdx, 1);
@@ -2655,7 +2728,13 @@ async function moveCardTo(draggedId, targetColumnKey, targetId, before){
     setPrefixedTag(movedCard, 'DISCARDED:', null);
   }
 
-  if(targetId){
+  if(columnSortMode[targetColumnKey] === 'updated-desc'){
+    // Same reasoning as the pull-clone branch above: force it to the top
+    // of the raw array regardless of exactly where it was dropped, since
+    // updated-desc mode doesn't give drop position any visual meaning
+    // anyway — only the eventual manual-mode position matters here.
+    insertAtTopOfColumn(movedCard, targetColumnKey);
+  }else if(targetId){
     let targetIdx = cards.findIndex(c=>c.id===targetId);
     if(targetIdx === -1){
       cards.push(movedCard);
@@ -2666,8 +2745,6 @@ async function moveCardTo(draggedId, targetColumnKey, targetId, before){
   }else{
     cards.push(movedCard);
   }
-
-  columnSortMode[targetColumnKey] = 'manual';
 
   save();
   render();
@@ -2796,6 +2873,18 @@ document.getElementById('overlay').addEventListener('click', (e)=>{
 document.addEventListener('keydown', (e)=>{
   if(e.key === 'Escape' && document.getElementById('overlay').classList.contains('open')){
     closeModal();
+  }
+  if((e.key === 'z' || e.key === 'Z') && (e.metaKey || e.ctrlKey) && !e.shiftKey){
+    const tag = (e.target.tagName || '').toLowerCase();
+    const isEditableField = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
+    const anyModalOpen = ['overlay','dialogOverlay','rejectReasonOverlay','settingsOverlay'].some(id=>{
+      const el = document.getElementById(id);
+      return el && el.classList.contains('open');
+    });
+    if(!isEditableField && !anyModalOpen){
+      e.preventDefault();
+      performUndo();
+    }
   }
 });
 
@@ -3001,6 +3090,7 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
     await showAlertModal('Pick or add a user first.');
     return;
   }
+  pushUndoSnapshot();
   if(editingId){
     const idx = cards.findIndex(c=>c.id===editingId);
     if(idx > -1) cards[idx] = {...cards[idx], ...data};
@@ -3015,6 +3105,7 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
 document.getElementById('deleteBtn').addEventListener('click', async ()=>{
   if(!editingId) return;
   if(!(await askConfirm('Delete this entry?'))) return;
+  pushUndoSnapshot();
   const idx = cards.findIndex(c=>c.id===editingId);
   if(idx > -1){
     cards[idx].deleted = true;
@@ -3025,6 +3116,7 @@ document.getElementById('deleteBtn').addEventListener('click', async ()=>{
   closeModal();
 });
 
+document.getElementById('undoBtn').addEventListener('click', performUndo);
 document.getElementById('exportBtn').addEventListener('click', ()=>{
   const payload = { version: 2, cards, users };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
@@ -3081,6 +3173,7 @@ document.getElementById('importFile').addEventListener('change', async (e)=>{
     `Click OK to REPLACE your current board with this file.\n` +
     `Click Cancel to MERGE it into your current board instead.`
   );
+  pushUndoSnapshot();
   if(replace){
     cards = importedCards.map(c=> ({...c, id: c.id || uid()}));
     importedUsers.forEach(u=>{ if(!users.includes(u)) users.push(u); });
