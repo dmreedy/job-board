@@ -274,13 +274,20 @@
 
   .filterbar{
     display:flex;
-    flex-wrap:nowrap;
-    overflow-x:auto;
     align-items:center;
     gap:7px;
     padding:14px 32px 0;
     flex:1;
     min-width:0;
+  }
+  .filterbar-scroll{
+    display:flex;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    align-items:center;
+    gap:7px;
+    min-width:0;
+    padding-bottom:8px;
     scrollbar-width:thin;
     scrollbar-color:var(--brass) transparent;
   }
@@ -288,18 +295,18 @@
      "a dot moving along a line" — replacing the default browser scrollbar.
      Firefox gets the plain thin/brass treatment above; this pseudo-element
      styling covers Chrome/Edge/Safari, which support far more customization. */
-  .filterbar::-webkit-scrollbar{
+  .filterbar-scroll::-webkit-scrollbar{
     height:12px;
   }
-  .filterbar::-webkit-scrollbar-track{
+  .filterbar-scroll::-webkit-scrollbar-track{
     background: linear-gradient(to bottom, transparent 45%, var(--hairline) 45%, var(--hairline) 55%, transparent 55%);
   }
-  .filterbar::-webkit-scrollbar-thumb{
+  .filterbar-scroll::-webkit-scrollbar-thumb{
     background:var(--brass);
     border-radius:50%;
     border:3px solid var(--bg);
   }
-  .filterbar::-webkit-scrollbar-thumb:hover{
+  .filterbar-scroll::-webkit-scrollbar-thumb:hover{
     background:#dab472;
   }
   .filterbar .flabel{
@@ -326,7 +333,7 @@
     border-color:var(--brass);
     color:#1b1e24;
   }
-  .ftag.clear{ color:var(--paper-dim); text-decoration:underline; background:none; border:none; }
+  .ftag.clear{ color:var(--paper-dim); text-decoration:underline; background:none; border:none; flex-shrink:0; }
 
   .card .utags{
     display:flex;
@@ -976,7 +983,7 @@
     <span>Card aging</span>
   </label>
   <div class="filter-sep"></div>
-  <div class="filterbar" id="filterbar" style="display:none; padding:0 0 8px 0;"></div>
+  <div class="filterbar" id="filterbar" style="display:none;"></div>
 </div>
 <div class="bulkbar" id="bulkbar" style="display:none;"></div>
 <div class="board" id="board"></div>
@@ -1321,13 +1328,16 @@ function renderFilterbar(){
   }
   bar.style.display = 'flex';
   bar.innerHTML = `<span class="flabel">Filter by tag</span>` +
-    tags.map(t=>{
-      const ft = elideTagText(t);
-      return `<button class="ftag${activeTagFilters.includes(t)?' active':''}" data-tag="${escapeAttr(t)}"${ft.titleAttr}>${ft.display}</button>`;
-    }).join('') +
-    (activeTagFilters.length ? `<button class="ftag clear" id="clearFilters">Clear</button>` : '');
+    (activeTagFilters.length ? `<button class="ftag clear" id="clearFilters">Clear</button>` : '') +
+    `<div class="filterbar-scroll" id="filterbarScroll"></div>`;
 
-  bar.querySelectorAll('.ftag[data-tag]').forEach(btn=>{
+  const scroll = document.getElementById('filterbarScroll');
+  scroll.innerHTML = tags.map(t=>{
+    const ft = elideTagText(t);
+    return `<button class="ftag${activeTagFilters.includes(t)?' active':''}" data-tag="${escapeAttr(t)}"${ft.titleAttr}>${ft.display}</button>`;
+  }).join('');
+
+  scroll.querySelectorAll('.ftag[data-tag]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const tag = btn.dataset.tag;
       if(activeTagFilters.includes(tag)){
