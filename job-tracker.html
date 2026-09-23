@@ -352,6 +352,39 @@
     border:1px solid rgba(255,92,92,0.4);
     font-weight:700;
   }
+  .reason-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(110px, 1fr));
+    gap:6px;
+    max-height:240px;
+    overflow-y:auto;
+    margin-bottom:12px;
+  }
+  .reason-grid-tile{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:2px;
+    background:var(--panel-2);
+    border:1px solid var(--hairline);
+    border-radius:4px;
+    padding:8px 10px;
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    text-align:left;
+    cursor:pointer;
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+    width:100%;
+  }
+  .reason-grid-tile:hover{ border-color:var(--brass-dim); background:var(--panel); }
+  .reason-grid-count{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    color:var(--paper-dim);
+  }
   .detail.reason-pill{
     color:#ff5c5c;
     background:rgba(255,92,92,0.18);
@@ -990,11 +1023,7 @@
     </div>
     <div class="field" id="f-rejection-field" style="display:none;">
       <label>Reason for rejection</label>
-      <select id="f-rejection-reason">
-        <option value="RESUME SCREEN">Resume screen</option>
-        <option value="OTHER">Other</option>
-      </select>
-      <input id="f-rejection-other-text" placeholder="Describe the reason..." style="display:none; margin-top:6px;" />
+      <input id="f-rejection-reason-text" placeholder="e.g. Resume screen, Other" />
     </div>
     <div class="field">
       <label>Posting link</label>
@@ -1066,22 +1095,18 @@
   </div>
 </div>
 
-<div class="overlay" id="rejectReasonOverlay">
-  <div class="modal" style="width:340px;">
-    <p style="font-size:13.5px; color:var(--paper); margin:0 0 14px; line-height:1.5;">Why is this job being rejected?</p>
-    <div id="rejectReasonChoices" style="display:flex; flex-direction:column; gap:8px;">
-      <button class="btn" id="rejectReasonResumeBtn" style="text-align:left; padding:10px 14px;">Resume screen</button>
-      <button class="btn" id="rejectReasonOtherBtn" style="text-align:left; padding:10px 14px;">Other</button>
+<div class="overlay" id="reasonPickerOverlay">
+  <div class="modal" style="width:420px;">
+    <p id="reasonPickerPrompt" style="font-size:13.5px; color:var(--paper); margin:0 0 12px; line-height:1.5;">Why is this job being rejected?</p>
+    <div id="reasonPickerGrid" class="reason-grid"></div>
+    <div id="reasonPickerEmpty" style="display:none; font-size:12px; color:var(--paper-dim); margin-bottom:12px;">No past reasons yet — type one below.</div>
+    <div class="field">
+      <input id="reasonPickerCustomText" placeholder="Or type a new reason…" />
     </div>
-    <div id="rejectReasonOtherWrap" style="display:none;">
-      <div class="field">
-        <input id="rejectReasonOtherText" placeholder="Describe the reason..." />
-      </div>
-      <div class="modal-actions">
-        <button class="btn" id="rejectReasonBackBtn">Back</button>
-        <div style="flex:1;"></div>
-        <button class="btn primary" id="rejectReasonSubmitBtn">Save</button>
-      </div>
+    <div class="modal-actions">
+      <button class="btn" id="reasonPickerSkipBtn" style="display:none;">Skip</button>
+      <div style="flex:1;"></div>
+      <button class="btn primary" id="reasonPickerSubmitBtn">Save</button>
     </div>
   </div>
 </div>
@@ -1686,51 +1711,76 @@ async function showAlertModal(message){
   await openDialogInternal({message, showInput:false, showCancel:false});
 }
 
-// A dedicated picker (Resume screen / Other) shown at the moment a card
-// is actually dropped into the Rejected column — deliberate choice to
-// interrupt the drag here rather than defer to the edit modal, per
-// explicit request. Choosing Other reveals a text field for a custom
-// reason rather than resolving immediately, producing a value like
-// "OTHER: <what they typed>" (or plain "OTHER" if left blank) — the
-// "OTHER" prefix stays stable so these still group together as a family
-// of reasons rather than each becoming a wholly distinct one-off tag.
-// No cancel option: the card has already landed in Rejected by the time
-// this shows, so a reason is always picked.
-let rejectReasonResolve = null;
-function askRejectionReason(){
+// Counts how often each distinct reason (the text after a given prefix,
+// e.g. "REJECTED:") appears across all current cards' tags, sorted most-
+// frequent first. Since a card's reason tag is stripped the moment it
+// leaves that column (see setRejectionTag/setPrefixedTag call sites),
+// this naturally reflects only reasons currently in use on the board —
+// there's no separate history store to keep in sync.
+function reasonFrequency(prefix){
+  const counts = new Map();
+  cards.forEach(c=>{
+    (c.tags || []).forEach(t=>{
+      if(t.startsWith(prefix)){
+        const reason = t.slice(prefix.length);
+        counts.set(reason, (counts.get(reason) || 0) + 1);
+      }
+    });
+  });
+  return Array.from(counts.entries()).sort((a,b)=> b[1] - a[1]);
+}
+
+// Generic reason picker: a frequency-ranked grid of past reasons (for the
+// given prefix — "REJECTED:" or "DISCARDED:") plus free-text entry for a
+// new one. Used both when a card is dropped into Rejected/Discarded and
+// wherever else a reason needs picking. When optional is true, a Skip
+// button is shown and submitting blank text resolves to '' (no tag);
+// when false, submitting blank text does nothing — some reason is
+// required before the modal will close.
+let reasonPickerResolve = null;
+function askReasonFromGrid(prefix, promptText, optional){
   return new Promise(resolve=>{
-    rejectReasonResolve = resolve;
-    document.getElementById('rejectReasonChoices').style.display = 'flex';
-    document.getElementById('rejectReasonOtherWrap').style.display = 'none';
-    document.getElementById('rejectReasonOtherText').value = '';
-    document.getElementById('rejectReasonOverlay').classList.add('open');
+    reasonPickerResolve = resolve;
+    document.getElementById('reasonPickerPrompt').textContent = promptText;
+    const freq = reasonFrequency(prefix);
+    const grid = document.getElementById('reasonPickerGrid');
+    grid.innerHTML = freq.map(([reason, count])=>{
+      const et = elideTagText(reason);
+      return `<button type="button" class="reason-grid-tile"${et.titleAttr} data-reason="${escapeAttr(reason)}">${et.display}<span class="reason-grid-count">${count} card${count===1?'':'s'}</span></button>`;
+    }).join('');
+    document.getElementById('reasonPickerEmpty').style.display = freq.length === 0 ? 'block' : 'none';
+    document.getElementById('reasonPickerCustomText').value = '';
+    document.getElementById('reasonPickerSkipBtn').style.display = optional ? 'inline-block' : 'none';
+    document.getElementById('reasonPickerOverlay').classList.add('open');
+    setTimeout(()=> document.getElementById('reasonPickerCustomText').focus(), 30);
   });
 }
-function resolveRejectReason(value){
-  document.getElementById('rejectReasonOverlay').classList.remove('open');
-  if(rejectReasonResolve){
-    const r = rejectReasonResolve;
-    rejectReasonResolve = null;
+function resolveReasonPicker(value){
+  document.getElementById('reasonPickerOverlay').classList.remove('open');
+  if(reasonPickerResolve){
+    const r = reasonPickerResolve;
+    reasonPickerResolve = null;
     r(value);
   }
 }
-document.getElementById('rejectReasonResumeBtn').addEventListener('click', ()=> resolveRejectReason('RESUME SCREEN'));
-document.getElementById('rejectReasonOtherBtn').addEventListener('click', ()=>{
-  document.getElementById('rejectReasonChoices').style.display = 'none';
-  document.getElementById('rejectReasonOtherWrap').style.display = 'block';
-  setTimeout(()=> document.getElementById('rejectReasonOtherText').focus(), 30);
+document.getElementById('reasonPickerGrid').addEventListener('click', (e)=>{
+  const tile = e.target.closest('[data-reason]');
+  if(tile) resolveReasonPicker(tile.dataset.reason);
 });
-document.getElementById('rejectReasonBackBtn').addEventListener('click', ()=>{
-  document.getElementById('rejectReasonChoices').style.display = 'flex';
-  document.getElementById('rejectReasonOtherWrap').style.display = 'none';
-});
-function submitRejectReasonOther(){
-  const text = document.getElementById('rejectReasonOtherText').value.trim();
-  resolveRejectReason(text ? `OTHER: ${text}` : 'OTHER');
+document.getElementById('reasonPickerSkipBtn').addEventListener('click', ()=> resolveReasonPicker(''));
+function submitReasonPickerCustom(){
+  const text = document.getElementById('reasonPickerCustomText').value.trim();
+  const isOptional = document.getElementById('reasonPickerSkipBtn').style.display !== 'none';
+  if(text){
+    resolveReasonPicker(text);
+  }else if(isOptional){
+    resolveReasonPicker('');
+  }
+  // else: required and nothing typed — do nothing, modal stays open.
 }
-document.getElementById('rejectReasonSubmitBtn').addEventListener('click', submitRejectReasonOther);
-document.getElementById('rejectReasonOtherText').addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter'){ e.preventDefault(); submitRejectReasonOther(); }
+document.getElementById('reasonPickerSubmitBtn').addEventListener('click', submitReasonPickerCustom);
+document.getElementById('reasonPickerCustomText').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){ e.preventDefault(); submitReasonPickerCustom(); }
 });
 
 // Combined first-run modal: collects a name (required), and optionally sync
@@ -2635,13 +2685,11 @@ function setPrefixedTag(card, prefix, value){
   card.tags = value ? [...withoutOld, `${prefix}${value}`] : withoutOld;
 }
 
-// Discarded's reason is optional and free-text only (no quick-pick
-// options yet) — asks via the plain prompt dialog, and only adds the tag
-// if the person actually typed something; leaving it blank adds no tag
-// at all, rather than falling back to a generic placeholder like
-// Rejected's "OTHER" does.
+// Discarded's reason uses the same frequency-grid picker as Rejected,
+// but stays optional — Skip is shown, and leaving the text blank adds no
+// tag at all rather than falling back to a generic placeholder.
 async function applyDiscardReason(card){
-  const reason = ((await askPrompt('Reason for discarding? (optional)')) || '').trim();
+  const reason = await askReasonFromGrid('DISCARDED:', `Reason for ${discardedLabel().toLowerCase()}? (optional)`, true);
   setPrefixedTag(card, 'DISCARDED:', reason);
 }
 
@@ -2681,7 +2729,7 @@ async function moveCardTo(draggedId, targetColumnKey, targetId, before){
     pushUndoSnapshot();
     const clone = { ...draggedCard, id: uid(), owner: currentUser, column: targetColumnKey, sourceId: draggedCard.id, updatedAt: Date.now() };
     if(targetColumnKey === 'closed'){
-      const reason = await askRejectionReason();
+      const reason = await askReasonFromGrid('REJECTED:', 'Why is this job being rejected?', false);
       setRejectionTag(clone, reason);
     }else if(targetColumnKey === 'discarded'){
       await applyDiscardReason(clone);
@@ -2717,7 +2765,7 @@ async function moveCardTo(draggedId, targetColumnKey, targetId, before){
   movedCard.column = targetColumnKey;
   movedCard.updatedAt = Date.now();
   if(targetColumnKey === 'closed' && !wasAlreadyRejected){
-    const reason = await askRejectionReason();
+    const reason = await askReasonFromGrid('REJECTED:', 'Why is this job being rejected?', false);
     setRejectionTag(movedCard, reason);
   }else if(targetColumnKey !== 'closed' && wasAlreadyRejected){
     setRejectionTag(movedCard, null);
@@ -2777,12 +2825,6 @@ function updateRejectionFieldVisibility(){
 }
 document.getElementById('f-column').addEventListener('change', updateRejectionFieldVisibility);
 
-function updateRejectionOtherVisibility(){
-  const isOther = document.getElementById('f-rejection-reason').value === 'OTHER';
-  document.getElementById('f-rejection-other-text').style.display = isOther ? 'block' : 'none';
-}
-document.getElementById('f-rejection-reason').addEventListener('change', updateRejectionOtherVisibility);
-
 // Clips the modal's own top-right corner the same way cards are clipped —
 // an isosceles right triangle whose legs are 1/8 of the modal's own
 // width. Computed from real measured width (not a fixed CSS percentage),
@@ -2824,20 +2866,7 @@ function openModal(card){
   document.getElementById('f-date').value = card ? card.date || '' : new Date().toISOString().slice(0,10);
   document.getElementById('f-url').value = card ? card.url || '' : '';
   const existingRejectedTag = card && card.tags ? card.tags.find(t=>t.startsWith('REJECTED:')) : null;
-  const existingReason = existingRejectedTag ? existingRejectedTag.slice('REJECTED:'.length) : 'RESUME SCREEN';
-  if(existingReason === 'RESUME SCREEN'){
-    document.getElementById('f-rejection-reason').value = 'RESUME SCREEN';
-    document.getElementById('f-rejection-other-text').value = '';
-  }else if(existingReason.startsWith('OTHER: ')){
-    document.getElementById('f-rejection-reason').value = 'OTHER';
-    document.getElementById('f-rejection-other-text').value = existingReason.slice('OTHER: '.length);
-  }else{
-    // Covers plain "OTHER" and any older-format value that doesn't match
-    // the current scheme — treated as Other with no further detail.
-    document.getElementById('f-rejection-reason').value = 'OTHER';
-    document.getElementById('f-rejection-other-text').value = '';
-  }
-  updateRejectionOtherVisibility();
+  document.getElementById('f-rejection-reason-text').value = existingRejectedTag ? existingRejectedTag.slice('REJECTED:'.length) : '';
   document.getElementById('f-tags').value = card && card.tags ? card.tags.filter(t=>!t.startsWith('from:') && !t.startsWith('REJECTED:') && !t.startsWith('DISCARDED:')).join(', ') : '';
   document.getElementById('f-notes').value = card ? card.notes || '' : '';
   document.getElementById('deleteBtn').style.display = card ? 'inline-block' : 'none';
@@ -2877,7 +2906,7 @@ document.addEventListener('keydown', (e)=>{
   if((e.key === 'z' || e.key === 'Z') && (e.metaKey || e.ctrlKey) && !e.shiftKey){
     const tag = (e.target.tagName || '').toLowerCase();
     const isEditableField = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
-    const anyModalOpen = ['overlay','dialogOverlay','rejectReasonOverlay','settingsOverlay'].some(id=>{
+    const anyModalOpen = ['overlay','dialogOverlay','reasonPickerOverlay','settingsOverlay'].some(id=>{
       const el = document.getElementById(id);
       return el && el.classList.contains('open');
     });
@@ -2974,9 +3003,7 @@ function openModalPrefill(data){
   document.getElementById('f-column').value = 'postings';
   document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
   document.getElementById('f-url').value = data.url || '';
-  document.getElementById('f-rejection-reason').value = 'RESUME SCREEN';
-  document.getElementById('f-rejection-other-text').value = '';
-  updateRejectionOtherVisibility();
+  document.getElementById('f-rejection-reason-text').value = '';
   document.getElementById('f-tags').value = '';
   document.getElementById('f-notes').value = data.notes || '';
   document.getElementById('deleteBtn').style.display = 'none';
@@ -3052,15 +3079,13 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   if(src) tags.push(src);
   if(currentUser) tags.push(`from:${currentUser}`);
   if(column === 'closed'){
-    const selectedReason = document.getElementById('f-rejection-reason').value;
-    const otherText = document.getElementById('f-rejection-other-text').value.trim();
-    const reason = (selectedReason === 'OTHER' && otherText) ? `OTHER: ${otherText}` : selectedReason;
-    tags.push(`REJECTED:${reason}`);
+    const reason = document.getElementById('f-rejection-reason-text').value.trim();
+    if(reason) tags.push(`REJECTED:${reason}`);
   }
   const priorCard = editingId ? cards.find(c=>c.id===editingId) : null;
   const enteringDiscarded = column === 'discarded' && (!priorCard || priorCard.column !== 'discarded');
   if(enteringDiscarded){
-    const reason = ((await askPrompt('Reason for discarding? (optional)')) || '').trim();
+    const reason = await askReasonFromGrid('DISCARDED:', `Reason for ${discardedLabel().toLowerCase()}? (optional)`, true);
     if(reason) tags.push(`DISCARDED:${reason}`);
   }else if(column === 'discarded' && priorCard){
     // Already discarded and re-saving for an unrelated edit — keep
