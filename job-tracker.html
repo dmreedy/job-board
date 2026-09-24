@@ -599,8 +599,8 @@
   }
   .col-body{
     padding:10px;
-    display:flex;
-    flex-direction:column;
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
     gap:9px;
     min-height:60px;
     flex:1;
