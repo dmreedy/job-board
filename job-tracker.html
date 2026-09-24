@@ -149,16 +149,19 @@
   }
   .reset-widths-wrap{
     display:flex;
-    flex-direction:column;
     align-items:center;
-    gap:2px;
+    gap:7px;
     flex-shrink:0;
     margin-left:10px;
     cursor:pointer;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--paper-dim);
   }
   .reset-widths-btn{
-    width:16px;
-    height:16px;
+    width:13px;
+    height:13px;
+    flex-shrink:0;
     border-radius:50%;
     background:#a6543f;
     border:none;
@@ -168,9 +171,6 @@
   .reset-widths-wrap:hover .reset-widths-btn{ background:#c4634a; }
   .reset-widths-wrap:active .reset-widths-btn{ background:#8a4433; }
   .reset-widths-label{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:9px;
-    color:var(--paper-dim);
     line-height:1;
   }
   .controlbar input[type="text"]{
