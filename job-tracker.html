@@ -147,6 +147,32 @@
     flex-shrink:0;
     margin:0 8px;
   }
+  .reset-widths-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+    flex-shrink:0;
+    margin-left:10px;
+    cursor:pointer;
+  }
+  .reset-widths-btn{
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    background:#a6543f;
+    border:none;
+    cursor:pointer;
+    padding:0;
+  }
+  .reset-widths-wrap:hover .reset-widths-btn{ background:#c4634a; }
+  .reset-widths-wrap:active .reset-widths-btn{ background:#8a4433; }
+  .reset-widths-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px;
+    color:var(--paper-dim);
+    line-height:1;
+  }
   .controlbar input[type="text"]{
     flex:1;
     max-width:340px;
@@ -464,6 +490,20 @@
     max-width:360px;
     display:flex;
     flex-direction:column;
+    position:relative;
+  }
+  .col-resize-handle{
+    position:absolute;
+    top:0;
+    right:-4px;
+    width:8px;
+    height:100%;
+    cursor:col-resize;
+    z-index:4;
+    background:transparent;
+  }
+  .col-resize-handle:hover, .col-resize-handle.resizing{
+    background:linear-gradient(to right, transparent, rgba(201,163,93,0.35), transparent);
   }
   .column.shared{
     border-style:solid;
@@ -978,6 +1018,10 @@
     <button class="add-btn view-btn" id="viewPostingsBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:0 999px 999px 0;">⊞ Postings Grid</button>
   </div>
   <input type="text" id="searchInput" placeholder="Search role, company, location, notes…" />
+  <div class="reset-widths-wrap" id="resetColumnWidthsWrap" title="Reset column widths and clear search">
+    <button id="resetColumnWidthsBtn" class="reset-widths-btn"></button>
+    <span class="reset-widths-label">Reset</span>
+  </div>
   <label class="claimed-toggle-label" style="margin-left:6px; flex-shrink:0;">
     <input type="checkbox" class="claimed-toggle-cb" id="decayToggleCb" checked />
     <span>Card aging</span>
@@ -1248,6 +1292,10 @@ let editingId = null;
 let activeTagFilters = [];
 let searchQuery = '';
 let columnSortMode = {};
+// Manually-resized column widths, keyed by column key — session-only,
+// same as sort mode/hide-claimed/card-aging. Cleared entirely by the
+// Reset button; absent keys just fall back to the default flex sizing.
+let columnWidths = {};
 COLUMNS.forEach(c=> columnSortMode[c.key] = 'updated-desc');
 let selectedIds = new Set();
 let hideClaimedPostings = true;
@@ -2460,6 +2508,45 @@ function render(){
     });
   }
 
+  const COL_MIN_WIDTH = 220;
+  const COL_MAX_WIDTH = 900;
+
+  // Drag-to-resize: mousedown on the handle starts tracking, mousemove
+  // (bound to the document, not the handle, so the drag keeps working
+  // even if the cursor slips off the thin handle strip) computes the new
+  // width from the raw pointer delta, and mouseup persists it into
+  // columnWidths for this column key. Switches the column from its
+  // default flex sizing to an explicit pixel width the first time it's
+  // resized — max-width is cleared too, since the default 360px cap
+  // would otherwise silently clip anything wider than that.
+  function wireColumnResize(colEl, colKey){
+    const handle = colEl.querySelector('.col-resize-handle');
+    if(!handle) return;
+    handle.addEventListener('mousedown', (e)=>{
+      e.preventDefault();
+      const startX = e.clientX;
+      const startWidth = colEl.getBoundingClientRect().width;
+      handle.classList.add('resizing');
+      document.body.style.userSelect = 'none';
+      function onMove(moveEvent){
+        const delta = moveEvent.clientX - startX;
+        const newWidth = Math.min(COL_MAX_WIDTH, Math.max(COL_MIN_WIDTH, startWidth + delta));
+        colEl.style.flex = 'none';
+        colEl.style.width = newWidth + 'px';
+        colEl.style.maxWidth = 'none';
+      }
+      function onUp(){
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        handle.classList.remove('resizing');
+        document.body.style.userSelect = '';
+        columnWidths[colKey] = colEl.getBoundingClientRect().width;
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
   // Builds a fully-wired narrow column (header + sort/filter subbar + body).
   // Used for every column in board view, and for Discarded in postings view.
   function buildColumnEl(col){
@@ -2489,8 +2576,15 @@ function render(){
         </label>` : ''}
       </div>
       <div class="col-body" data-col="${col.key}"></div>
+      <div class="col-resize-handle" title="Drag to resize this column"></div>
     `;
+    if(columnWidths[col.key]){
+      colEl.style.flex = 'none';
+      colEl.style.width = columnWidths[col.key] + 'px';
+      colEl.style.maxWidth = 'none';
+    }
     const body = colEl.querySelector('.col-body');
+    wireColumnResize(colEl, col.key);
     colEl.querySelector('.col-sort-select').addEventListener('change', (e)=>{
       columnSortMode[col.key] = e.target.value;
       render();
@@ -2938,6 +3032,13 @@ document.getElementById('searchInput').addEventListener('input', (e)=>{
 
 document.getElementById('decayToggleCb').addEventListener('change', (e)=>{
   decayEnabled = e.target.checked;
+  render();
+});
+document.getElementById('resetColumnWidthsWrap').addEventListener('click', ()=>{
+  columnWidths = {};
+  clearTimeout(searchDebounce);
+  searchQuery = '';
+  document.getElementById('searchInput').value = '';
   render();
 });
 
