@@ -1933,7 +1933,15 @@ async function load(){
     lastSyncAt = res && res.value ? (Number(res.value) || 0) : 0;
   }catch(e){ lastSyncAt = 0; }
 
+  // Show whatever's cached locally right away, rather than leaving the
+  // board blank with no feedback while the remote fetch (below) is in
+  // flight — Apps Script Web Apps can have a genuine cold-start delay, and
+  // previously there was no indication anything was happening during it.
+  renderUserSelect();
+  render();
+
   if(syncUrl){
+    setSyncIndicator('syncing');
     const remote = await remoteFetchAll();
     if(remote){
       const merged = mergeCardsAndUsers(remote.cards, remote.users);
@@ -1963,6 +1971,7 @@ async function load(){
         await store.set(SYNC_URL_KEY, syncUrl);
         await store.set(SYNC_SECRET_KEY, syncSecret);
 
+        setSyncIndicator('syncing');
         const remote = await remoteFetchAll();
         if(remote){
           const merged = mergeCardsAndUsers(remote.cards, remote.users);
