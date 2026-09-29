@@ -173,6 +173,13 @@
   .reset-widths-label{
     line-height:1;
   }
+  @keyframes sync-pulse{
+    0%, 100% { opacity:0.35; }
+    50% { opacity:1; }
+  }
+  #syncState.sync-pulse{
+    animation: sync-pulse 1.1s ease-in-out infinite;
+  }
   .controlbar input[type="text"]{
     flex:1;
     max-width:340px;
@@ -1020,7 +1027,7 @@
   <input type="text" id="searchInput" placeholder="Search role, company, location, notes…" />
   <div class="reset-widths-wrap" id="resetColumnWidthsWrap" title="Reset column widths and clear search">
     <button id="resetColumnWidthsBtn" class="reset-widths-btn"></button>
-    <span class="reset-widths-label">Reset</span>
+    <span class="reset-widths-label">Reset Widths</span>
   </div>
   <label class="claimed-toggle-label" style="margin-left:6px; flex-shrink:0;">
     <input type="checkbox" class="claimed-toggle-cb" id="decayToggleCb" checked />
@@ -1540,6 +1547,7 @@ function setSyncIndicator(state){
     el.textContent = '';
     el.title = '';
     el.style.cursor = 'default';
+    el.classList.remove('sync-pulse');
     return;
   }
   if(state === 'syncing'){
@@ -1547,8 +1555,10 @@ function setSyncIndicator(state){
     el.style.color = 'var(--paper-dim)';
     el.title = '';
     el.style.cursor = 'default';
+    el.classList.add('sync-pulse');
     return;
   }
+  el.classList.remove('sync-pulse');
   el.textContent = state === 'synced' ? 'synced' : 'sync failed (tap for detail)';
   el.style.color = state === 'synced' ? 'var(--paper-dim)' : '#e0a292';
   el.title = state === 'failed' ? (lastSyncError || 'Unknown error') : '';
