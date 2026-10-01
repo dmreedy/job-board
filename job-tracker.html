@@ -104,11 +104,13 @@
     border-radius:3px;
     overflow:hidden;
     background:var(--hairline);
+    gap:2px;
   }
   .stats-fill-bar .seg{
     flex-shrink:0;
     flex-basis:0;
     height:100%;
+    border-radius:1px;
   }
   .add-btn{
     background:var(--brass);
@@ -3241,8 +3243,17 @@ function render(){
     statsFillBarEl.innerHTML = COLUMNS.map(c=>{
       const pct = barPct(c.key);
       const segLabel = c.key === 'hopper' ? hopperLabel() : c.key === 'discarded' ? discardedLabel() : c.label;
-      return `<div class="seg" style="flex-grow:${pct}; background:var(--${c.key});" title="${escapeHtml(segLabel)}: ${pct.toFixed(1)}%"></div>`;
-    }).join('');
+      return { pct, segLabel, key: c.key };
+    })
+      // A 0%-width column still becomes a flex item, and `gap` renders
+      // between every pair of adjacent items whether or not either one
+      // has any width — so a zero-width segment sitting between two real
+      // ones produced what looked like a doubled-up gap. Dropping empty
+      // segments entirely means `gap` only ever appears between segments
+      // that actually have width.
+      .filter(seg => seg.pct > 0)
+      .map(seg => `<div class="seg" style="flex-grow:${seg.pct}; background:var(--${seg.key});" title="${escapeHtml(seg.segLabel)}: ${seg.pct.toFixed(1)}%"></div>`)
+      .join('');
   }
 
   // Builds one fully-wired card element. Reused by both the normal narrow
