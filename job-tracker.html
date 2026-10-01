@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Job Search</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%231b1e24'/%3E%3Crect x='14' y='16' width='36' height='34' rx='3' fill='%232a2f38' stroke='%233a3f4a' stroke-width='1.5'/%3E%3Ccircle cx='22' cy='24' r='4' fill='%23c9a35d'/%3E%3Crect x='30' y='22' width='14' height='3' rx='1.5' fill='%23b9b3a0'/%3E%3Crect x='20' y='34' width='24' height='2.5' rx='1.25' fill='%233a3f4a'/%3E%3Crect x='20' y='40' width='18' height='2.5' rx='1.25' fill='%233a3f4a'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -170,6 +171,13 @@
     font-weight:600;
     font-size:13px;
     padding:7px 10px;
+  }
+
+  .resume-wrap{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    margin-left:14px;
   }
 
   .controlbar{
@@ -1067,17 +1075,443 @@
     .stats{ display:none; }
     .user-picker{ margin-left:0; padding-left:0; border-left:none; }
   }
+
+  /* ================================================================
+     MOBILE SHELL
+     Structural/visual rules for the .m-app markup are defined
+     unconditionally below (harmless while .m-app is display:none on
+     wide screens), but the actual SWITCH between desktop and mobile
+     layouts — hiding the desktop chrome, showing .m-app, and
+     centering it — lives in the @media(max-width:700px) block at the
+     very end of this stylesheet, so it auto-engages by viewport width
+     alone (see "MOBILE SHELL SWITCH" below). A handful of desktop
+     elements (user picker, settings gear, sync button+pill) are
+     relocated into the mobile header by the init script rather than
+     rebuilt, so renderUserSelect()/updateSyncUI()/setSyncIndicator()
+     keep driving them on both layouts.
+     ================================================================ */
+  .m-app{
+    display:none;
+    flex:1;
+    min-height:0;
+    width:100%;
+    max-width:480px;
+    flex-direction:column;
+    background:var(--bg);
+    position:relative;
+    box-shadow: 0 0 0 1px var(--hairline);
+  }
+
+  .m-header{
+    flex-shrink:0;
+    background:var(--panel);
+    border-bottom:1px solid var(--hairline);
+    padding:14px 16px 10px;
+  }
+  .m-header-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .m-title{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:18px;
+    margin:0;
+    white-space:nowrap;
+  }
+  .m-header-actions{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-width:0;
+  }
+  /* The relocated user-picker needs to shed its desktop-topbar spacing
+     (left border/padding meant to separate it from the title that sat
+     right next to it) now that it's sitting in its own header row. */
+  .m-header-actions .user-picker{
+    margin-left:0 !important;
+    padding-left:0 !important;
+    border-left:none !important;
+    min-width:0;
+  }
+  .m-header-actions .user-picker select{
+    max-width:30vw;
+    text-overflow:ellipsis;
+  }
+  .m-header-actions #settingsBtn{
+    font-size:20px !important;
+    padding:4px 6px !important;
+  }
+  .m-header-sync{
+    margin-top:8px;
+    min-height:1px;
+  }
+  /* The relocated sync button/pill, restyled to stretch full-width and
+     stack sanely at phone width instead of the desktop inline-pair.
+     updateSyncUI() (unchanged, defined with the desktop code below)
+     still toggles this element's inline display between 'none' and
+     'inline-block' — width:100% makes inline-block render full-width
+     too, so there's no need to fight that inline style here. */
+  .m-header-sync #syncBtn{
+    width:100%;
+    text-align:center;
+    margin-left:0 !important;
+    box-sizing:border-box;
+  }
+  .m-header-sync #syncState{
+    display:block;
+    width:fit-content;
+    margin:6px auto 0 !important;
+    text-align:center;
+  }
+  .m-header-sync #syncState:empty{ margin:0 !important; }
+
+  .m-main{
+    flex:1;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+  .m-screen{
+    display:none;
+    flex:1;
+    min-height:0;
+    flex-direction:column;
+    padding:14px 16px 16px;
+    overflow:hidden;
+  }
+  .m-screen.active{ display:flex; }
+
+  .m-screen-head{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-shrink:0;
+    margin-bottom:12px;
+  }
+  .m-screen-title{
+    font-family:'Fraunces',serif;
+    font-size:16px;
+    font-weight:500;
+  }
+  #mPostingsSearch{
+    flex:1;
+    min-width:0;
+    background:var(--bg);
+    border:1px solid var(--hairline);
+    border-radius:8px;
+    color:var(--paper);
+    padding:10px 12px;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+  }
+  #mPostingsSearch:focus{ outline:none; border-color:var(--brass-dim); }
+  .m-claimed-toggle{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    font-family:'IBM Plex Mono',monospace;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+
+  .m-list{
+    flex:1;
+    min-height:0;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding-bottom:4px;
+    -webkit-overflow-scrolling:touch;
+  }
+  .m-list-empty{
+    color:var(--paper-dim);
+    font-size:13px;
+    text-align:center;
+    padding:40px 20px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+
+  .m-card{
+    position:relative;
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:10px;
+    padding:13px 14px;
+    padding-left:17px;
+    overflow:hidden;
+    flex-shrink:0;
+  }
+  .m-card::before{
+    content:'';
+    position:absolute;
+    top:0; left:0; bottom:0;
+    width:4px;
+    background:var(--accent);
+  }
+  .m-card.m-card-claimed{ opacity:0.72; }
+  .m-card-top{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .m-card-main{ min-width:0; }
+  .m-card-company{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:15px;
+    margin:0 0 2px;
+    overflow-wrap:anywhere;
+  }
+  .m-card-role{
+    font-size:13px;
+    color:var(--paper-dim);
+    margin:0;
+    overflow-wrap:anywhere;
+  }
+  .m-card-link{
+    flex-shrink:0;
+    font-size:17px;
+    text-decoration:none;
+    color:var(--paper-dim);
+    padding:4px;
+    margin:-4px;
+  }
+  .m-card-details{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-top:9px;
+  }
+  .m-card-tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:5px;
+    margin-top:7px;
+  }
+  .m-card-actions{
+    display:flex;
+    gap:8px;
+    margin-top:11px;
+  }
+  .m-claim-btn{
+    flex:1;
+    background:var(--brass);
+    color:#1b1e24;
+    border:none;
+    border-radius:7px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    padding:10px 12px;
+    cursor:pointer;
+  }
+  .m-claim-btn:active{ background:var(--brass-dim); }
+  .m-claimed-pill{
+    flex:1;
+    text-align:center;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--applied-text);
+    border:1px solid rgba(124,154,111,0.4);
+    background:rgba(124,154,111,0.12);
+    border-radius:7px;
+    padding:10px 12px;
+  }
+  .m-status-pill{
+    flex:1;
+    text-align:center;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--paper-dim);
+    border:1px solid var(--hairline);
+    border-radius:7px;
+    padding:10px 12px;
+  }
+
+  .m-new-actions{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .m-big-btn{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    text-align:left;
+    gap:3px;
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:12px;
+    padding:18px 18px;
+    color:var(--paper);
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .m-big-btn-primary{
+    background:var(--brass);
+    border-color:var(--brass);
+    color:#1b1e24;
+  }
+  .m-big-btn-primary .m-big-btn-sub{ color:rgba(27,30,36,0.65); }
+  .m-big-btn-icon{ font-size:22px; margin-bottom:2px; }
+  .m-big-btn-label{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; }
+  .m-big-btn-sub{ font-size:12px; color:var(--paper-dim); line-height:1.4; }
+  .m-new-hint{
+    margin-top:18px;
+    font-size:12px;
+    color:var(--paper-dim);
+    text-align:center;
+    font-family:'IBM Plex Mono',monospace;
+  }
+
+  .m-tabbar{
+    flex-shrink:0;
+    display:flex;
+    border-top:1px solid var(--hairline);
+    background:var(--panel);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .m-tab{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    background:none;
+    border:none;
+    color:var(--paper-dim);
+    padding:9px 4px 8px;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .m-tab-icon{ font-size:18px; line-height:1; }
+  .m-tab-label{ font-size:10px; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:0.04em; }
+  .m-tab.active{ color:var(--brass); }
+
+  /* The relocated edit/paste/dialog modals still work exactly as on
+     desktop, but should present as near-full-width sheets rather than
+     a 420px dialog floating in the middle of a phone screen. */
+  @media (max-width: 480px){
+    .modal{ width:100%; max-width:100%; border-radius:12px 12px 0 0; }
+    .overlay{ align-items:flex-end; }
+  }
+
+  /* ----------------------------------------------------------------
+     MOBILE SHELL SWITCH — the actual desktop↔mobile toggle, driven
+     purely by viewport width. Lives in its own media query (rather
+     than folded into the .m-app rules above) so it reads as one
+     clear "this is the line where the layout changes" statement.
+     body's default align-items (stretch, unset above) is what makes
+     the desktop topbar/controlbar/board fill the full width; centering
+     only makes sense once .m-app — a deliberately width-capped column —
+     is the thing being centered, so it's scoped to this query too.
+     ---------------------------------------------------------------- */
+  @media (max-width: 700px){
+    .topbar, .controlbar, .bulkbar, #board{ display:none !important; }
+    body{ align-items:center; }
+    .m-app{ display:flex; }
+  }
 </style>
 </head>
 <body>
 
+<!-- ============================================================
+     MOBILE SHELL — a phone-sized "create / browse / claim" UI that
+     automatically takes over on narrow viewports (see the
+     @media(max-width:700px) rule at the end of <style>, which hides
+     the desktop topbar/controlbar/bulkbar/board and shows this
+     instead). The desktop markup below is completely unmodified —
+     the user-picker, settings gear and sync button are physically
+     relocated up here by the init script rather than rebuilt, so
+     their existing listeners and renderUserSelect()/updateSyncUI()
+     logic keep working untouched on both layouts.
+     ============================================================ -->
+<div class="m-app" id="mApp">
+  <div class="m-header">
+    <div class="m-header-row">
+      <h1 class="m-title">Job Search</h1>
+      <div class="m-header-actions" id="mHeaderActions"></div>
+    </div>
+    <div class="m-header-sync" id="mHeaderSync"></div>
+  </div>
+
+  <main class="m-main" id="mMain">
+    <section class="m-screen" id="mScreenPostings">
+      <div class="m-screen-head">
+        <input type="text" id="mPostingsSearch" placeholder="Search postings…" />
+        <label class="m-claimed-toggle">
+          <input type="checkbox" id="mHideClaimedCb" />
+          <span>Hide claimed</span>
+        </label>
+      </div>
+      <div class="m-list" id="mPostingsList"></div>
+    </section>
+
+    <section class="m-screen" id="mScreenNew">
+      <div class="m-new-actions">
+        <button class="m-big-btn m-big-btn-primary" id="mOpenPaste">
+          <span class="m-big-btn-icon">📋</span>
+          <span class="m-big-btn-label">Paste from Posting</span>
+          <span class="m-big-btn-sub">Paste a link or the listing text — we'll parse the details</span>
+        </button>
+        <button class="m-big-btn" id="mOpenManual">
+          <span class="m-big-btn-icon">✎</span>
+          <span class="m-big-btn-label">Manual Entry</span>
+          <span class="m-big-btn-sub">Fill in role, company and details yourself</span>
+        </button>
+      </div>
+      <p class="m-new-hint" id="mNewHint"></p>
+    </section>
+
+    <section class="m-screen" id="mScreenHopper">
+      <div class="m-screen-head">
+        <span class="m-screen-title" id="mHopperTitle">My Hopper</span>
+      </div>
+      <div class="m-list" id="mHopperList"></div>
+    </section>
+  </main>
+
+  <nav class="m-tabbar">
+    <button class="m-tab" id="mTabNew" data-tab="new">
+      <span class="m-tab-icon">＋</span><span class="m-tab-label">New</span>
+    </button>
+    <button class="m-tab" id="mTabPostings" data-tab="postings">
+      <span class="m-tab-icon">⊞</span><span class="m-tab-label">Postings</span>
+    </button>
+    <button class="m-tab" id="mTabHopper" data-tab="hopper">
+      <span class="m-tab-icon">📥</span><span class="m-tab-label">Hopper</span>
+    </button>
+  </nav>
+</div>
+<!-- ============================================================
+     END MOBILE SHELL — desktop markup (the normal board on wide
+     screens) continues below.
+     ============================================================ -->
+
 <div class="topbar">
   <div style="display:flex; align-items:center;">
     <h1>Job Search</h1>
-    <div class="user-picker" style="margin-left:20px;">
+    <div class="user-picker" id="userPickerWrap" style="margin-left:20px;">
       <label>User</label>
       <select id="userSelect"></select>
-      <button class="icon-btn" id="deleteUserBtn" title="Delete this user" style="font-size:15px;">🗑</button>
+    </div>
+    <!-- Relocated here (previously in .toprow below) to sit directly next
+         to the User dropdown it's paired with. -->
+    <div class="user-picker viewing-picker" id="viewingWrap">
+      <label>Viewing</label>
+      <select id="viewingUserSelect"></select>
+    </div>
+    <div class="resume-wrap" id="resumeWrap">
+      <a class="add-btn" id="resumeBtn" style="border-radius:999px; text-decoration:none; display:inline-block; cursor:pointer;">Link Resume</a>
+      <button class="icon-btn" id="resumeSettingsBtn" title="Change resume link" style="display:none; font-size:15px;">⚙</button>
     </div>
     <div style="display:flex; gap:0; margin-left:14px;">
       <button class="add-btn entry-btn" id="openPaste">+ From Posting</button>
@@ -1087,10 +1521,6 @@
     <span id="syncState" style="min-width:60px; margin-left:8px; white-space:nowrap; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim);"></span>
   </div>
   <div class="toprow">
-    <div class="user-picker viewing-picker" id="viewingWrap" style="padding-left:0; border-left:none; margin-right:16px;">
-      <label>Viewing</label>
-      <select id="viewingUserSelect"></select>
-    </div>
     <div class="stats-wrap">
       <div class="stats" id="stats"></div>
       <div class="stats-fill-bar" id="statsFillBar"></div>
@@ -1279,6 +1709,25 @@
   </div>
 </div>
 
+<div class="overlay" id="resumeOverlay">
+  <div class="modal" style="width:420px;">
+    <h2>Resume link</h2>
+    <p style="font-size:12.5px; color:var(--paper-dim); margin:-8px 0 14px; line-height:1.5;">
+      Paste a link to your resume (Google Drive, Dropbox, a plain PDF URL, etc.) — anyone viewing your board can open it from the "View Resume" button.
+    </p>
+    <div class="field">
+      <label>Resume URL</label>
+      <input id="resume-url-input" placeholder="https://..." />
+    </div>
+    <div class="modal-actions">
+      <button class="btn danger" id="resumeRemoveBtn" style="display:none;">Remove link</button>
+      <div style="flex:1;"></div>
+      <button class="btn" id="resumeCancelBtn">Cancel</button>
+      <button class="btn primary" id="resumeSaveBtn" style="margin-left:8px;">Save</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="welcomeOverlay">
   <div class="modal" style="width:440px;">
     <h2>Welcome to Job Search</h2>
@@ -1378,10 +1827,20 @@ const CURRENT_USER_KEY = 'job-tracker-current-user';
 const SYNC_URL_KEY = 'job-tracker-sync-url';
 const SYNC_SECRET_KEY = 'job-tracker-sync-secret';
 const LAST_SYNC_KEY = 'job-tracker-last-sync-at';
+const RESUMES_KEY = 'job-tracker-user-resumes';
 
 let cards = [];
 let users = [];
 let currentUser = null;
+// Resume links, one per user: { [name]: { url, updatedAt } }. A user can
+// only ever write their own entry (see the resume modal's save handler),
+// but this still merges last-write-wins by updatedAt like cards do (see
+// mergeUserResumes) rather than just overwriting, so two devices editing
+// at different times don't flap. Removing a link sets url:'' with a fresh
+// updatedAt rather than deleting the key outright — same tombstone
+// reasoning as cards' `deleted` flag: an outright delete would just get
+// silently resurrected by whichever device syncs next with the old entry.
+let userResumes = {};
 // Which user's personal columns (Hopper/Applied/.../Discarded) are
 // currently on screen — session-only, like columnWidths/searchQuery.
 // null means "viewing myself", i.e. same as currentUser. Kept entirely
@@ -1637,7 +2096,11 @@ async function remotePushAllOnce(cardsArr, usersArr){
   try{
     const resp = await fetch(syncUrl, {
       method: 'POST',
-      body: JSON.stringify({ key: syncSecret || '', cards: cardsArr, users: usersArr })
+      // userResumes is read directly off the global rather than threaded
+      // through as a parameter — every call site already has the current
+      // value in scope at module level, same as how this function already
+      // reads syncUrl/syncSecret directly instead of taking them as args.
+      body: JSON.stringify({ key: syncSecret || '', cards: cardsArr, users: usersArr, resumes: userResumes })
     });
     const bodyText = await resp.text();
     if(!resp.ok){
@@ -1880,11 +2343,30 @@ function mergeCardsAndUsersPure(localCards, localUsers, remoteCards, remoteUsers
 // Thin wrapper around the pure core: supplies the app's actual local
 // state, advances lastSyncAt, and persists it — this is what the rest of
 // the app calls; the pure core above is what tests call.
-function mergeCardsAndUsers(remoteCards, remoteUsers){
+// Resumes merge the same way cards do — last-write-wins per entry by
+// updatedAt, remote only overwrites local when strictly newer (a tie
+// keeps local, same no-flapping reasoning as cards). Kept separate from
+// mergeCardsAndUsersPure (rather than folded into it) so that function's
+// signature — and the test suite that calls it directly — never has to
+// know resumes exist.
+function mergeUserResumes(localResumes, remoteResumes){
+  const merged = { ...localResumes };
+  Object.keys(remoteResumes || {}).forEach(name=>{
+    const remoteEntry = remoteResumes[name];
+    const localEntry = merged[name];
+    if(!localEntry || (remoteEntry.updatedAt||0) > (localEntry.updatedAt||0)){
+      merged[name] = remoteEntry;
+    }
+  });
+  return merged;
+}
+
+function mergeCardsAndUsers(remoteCards, remoteUsers, remoteResumes){
   const result = mergeCardsAndUsersPure(cards, users, remoteCards, remoteUsers, lastSyncAt, Date.now());
   recentlyChangedIds = result.recentlyChangedIds;
   lastSyncAt = Date.now();
   store.set(LAST_SYNC_KEY, String(lastSyncAt));
+  if(remoteResumes) userResumes = mergeUserResumes(userResumes, remoteResumes);
   return { cards: result.cards, users: result.users };
 }
 
@@ -2090,6 +2572,13 @@ async function load(){
   }
 
   try{
+    const res = await store.get(RESUMES_KEY);
+    userResumes = res && res.value ? JSON.parse(res.value) : {};
+  }catch(e){
+    userResumes = {};
+  }
+
+  try{
     const res = await store.get(CURRENT_USER_KEY);
     currentUser = res && res.value ? res.value : null;
   }catch(e){
@@ -2121,7 +2610,7 @@ async function load(){
     setSyncIndicator('syncing');
     const remote = await remoteFetchAll();
     if(remote){
-      const merged = mergeCardsAndUsers(remote.cards, remote.users);
+      const merged = mergeCardsAndUsers(remote.cards, remote.users, remote.resumes);
       cards = merged.cards;
       users = merged.users;
       setSyncIndicator('synced');
@@ -2151,7 +2640,7 @@ async function load(){
         setSyncIndicator('syncing');
         const remote = await remoteFetchAll();
         if(remote){
-          const merged = mergeCardsAndUsers(remote.cards, remote.users);
+          const merged = mergeCardsAndUsers(remote.cards, remote.users, remote.resumes);
           cards = merged.cards;
           users = merged.users;
           setSyncIndicator('synced');
@@ -2218,6 +2707,142 @@ async function saveUsers(){
   }
 }
 
+async function saveResumes(){
+  try{
+    const result = await store.set(RESUMES_KEY, JSON.stringify(userResumes));
+    if(!result) setSavedIndicator(false);
+  }catch(e){
+    console.error('storage failed', e);
+    setSavedIndicator(false);
+  }
+  if(syncUrl){
+    hasUnsyncedChanges = true;
+    updateSyncUI();
+  }
+  if(syncUrl){
+    // remotePushAllOnce reads the userResumes global directly (see its
+    // definition), so this push already carries the new link — no need
+    // to thread it through as a parameter here, same as cards/users.
+    const ok = await remotePushAll(cards, users);
+    setSyncIndicator(ok ? 'synced' : 'failed');
+  }
+}
+
+// Reflects whichever user's board is currently on screen (effectiveViewUser —
+// yourself by default, or whoever Viewing points at), not necessarily
+// currentUser:
+//  - that user has a resume on file  -> "View Resume" button (opens the
+//    link); a ⚙ to change it only appears when it's YOUR OWN resume —
+//    there's no editing someone else's link from here.
+//  - it's your own entry and empty   -> "Link Resume" button, opens the
+//    add-link modal.
+//  - someone else's and empty        -> nothing to show or do, hidden.
+function renderResumeUI(){
+  const wrap = document.getElementById('resumeWrap');
+  const btn = document.getElementById('resumeBtn');
+  const gear = document.getElementById('resumeSettingsBtn');
+  if(!wrap || !btn || !gear) return;
+
+  const viewedUser = effectiveViewUser();
+  if(!viewedUser){
+    wrap.style.display = 'none';
+    return;
+  }
+  const isOwn = viewedUser === currentUser;
+  const entry = userResumes[viewedUser];
+  const hasLink = !!(entry && entry.url);
+
+  if(hasLink){
+    wrap.style.display = 'flex';
+    btn.textContent = 'View Resume';
+    btn.title = isOwn ? 'Open your resume' : `Open ${viewedUser}'s resume`;
+    // Real href/target on a genuine, markup-present <a> — matches the
+    // posting-card nameplate links (the one external-link mechanism in
+    // this app that's never been reported as broken), and lets the
+    // browser handle the click as native anchor navigation rather than
+    // anything script-initiated. A synthetic .click() on a detached,
+    // JS-created anchor (the v1.8.1 attempt) still comes from script and
+    // can be treated as a popup; a real click on a real link in the DOM
+    // cannot be.
+    btn.href = entry.url;
+    btn.target = '_blank';
+    btn.rel = 'noopener';
+    gear.style.display = isOwn ? 'inline-block' : 'none';
+  }else if(isOwn){
+    wrap.style.display = 'flex';
+    btn.textContent = 'Link Resume';
+    btn.title = 'Add a link to your resume';
+    btn.removeAttribute('href');
+    btn.removeAttribute('target');
+    btn.removeAttribute('rel');
+    gear.style.display = 'none';
+  }else{
+    wrap.style.display = 'none';
+  }
+}
+
+function openResumeModal(){
+  const entry = userResumes[currentUser];
+  document.getElementById('resume-url-input').value = (entry && entry.url) || '';
+  document.getElementById('resumeRemoveBtn').style.display = (entry && entry.url) ? 'inline-block' : 'none';
+  document.getElementById('resumeOverlay').classList.add('open');
+  setTimeout(()=> document.getElementById('resume-url-input').focus(), 30);
+}
+function closeResumeModal(){
+  document.getElementById('resumeOverlay').classList.remove('open');
+}
+
+document.getElementById('resumeBtn').addEventListener('click', (e)=>{
+  const viewedUser = effectiveViewUser();
+  if(!viewedUser){ e.preventDefault(); return; }
+  const entry = userResumes[viewedUser];
+  if(entry && entry.url){
+    // #resumeBtn is a real <a href target="_blank"> whenever a link
+    // exists (set in renderResumeUI) — this click is genuine browser
+    // anchor navigation, not a script-triggered popup, so nothing to do
+    // here but let it proceed.
+  }else if(viewedUser === currentUser){
+    e.preventDefault();
+    openResumeModal();
+  }else{
+    e.preventDefault();
+  }
+});
+document.getElementById('resumeSettingsBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  openResumeModal();
+});
+document.getElementById('resumeCancelBtn').addEventListener('click', closeResumeModal);
+document.getElementById('resumeOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'resumeOverlay') closeResumeModal();
+});
+document.getElementById('resumeSaveBtn').addEventListener('click', async ()=>{
+  if(!currentUser){
+    await showAlertModal('Pick or add a user first.');
+    return;
+  }
+  const url = document.getElementById('resume-url-input').value.trim();
+  if(!url){
+    await showAlertModal('Paste a resume link first, or use Remove link.');
+    return;
+  }
+  userResumes = { ...userResumes, [currentUser]: { url, updatedAt: Date.now() } };
+  await saveResumes();
+  closeResumeModal();
+  renderResumeUI();
+});
+document.getElementById('resumeRemoveBtn').addEventListener('click', async ()=>{
+  if(!currentUser) return;
+  if(!(await askConfirm('Remove your resume link?'))) return;
+  // Tombstone (empty url + fresh updatedAt), not an outright delete — see
+  // the userResumes declaration for why a deleted key would just get
+  // resurrected by the next device to sync with the old entry.
+  userResumes = { ...userResumes, [currentUser]: { url: '', updatedAt: Date.now() } };
+  await saveResumes();
+  closeResumeModal();
+  renderResumeUI();
+});
+
 async function saveCurrentUser(){
   try{
     const result = await store.set(CURRENT_USER_KEY, currentUser || '');
@@ -2280,48 +2905,55 @@ document.getElementById('viewingUserSelect').addEventListener('change', (e)=>{
   render();
 });
 
-document.getElementById('deleteUserBtn').addEventListener('click', async ()=>{
-  if(!currentUser){
-    await showAlertModal('No user selected.');
-    return;
-  }
-  const name = currentUser;
-  const ownedCount = liveCards().filter(c=>c.owner===name).length;
-  const warn = ownedCount > 0
-    ? `Permanently delete "${name}"?\n\nThis will also permanently delete their ${ownedCount} personal card${ownedCount===1?'':'s'} (Hopper/Applied/etc.). You can undo this immediately after, but not once you've made another change.`
-    : `Permanently delete "${name}"?`;
-  if(!(await askConfirm(warn))) return;
-  pushUndoSnapshot();
-
-  cards.forEach(c=>{
-    if(c.owner===name){
-      c.deleted = true;
-      c.updatedAt = Date.now();
+// The Delete-user button is removed from the header for now (kept here,
+// guarded, rather than deleted outright, so it's a one-line change to
+// bring back — just re-add the #deleteUserBtn button to the User
+// dropdown's markup).
+const deleteUserBtnEl = document.getElementById('deleteUserBtn');
+if(deleteUserBtnEl){
+  deleteUserBtnEl.addEventListener('click', async ()=>{
+    if(!currentUser){
+      await showAlertModal('No user selected.');
+      return;
     }
-  });
-  selectedIds.clear();
-  await save();
+    const name = currentUser;
+    const ownedCount = liveCards().filter(c=>c.owner===name).length;
+    const warn = ownedCount > 0
+      ? `Permanently delete "${name}"?\n\nThis will also permanently delete their ${ownedCount} personal card${ownedCount===1?'':'s'} (Hopper/Applied/etc.). You can undo this immediately after, but not once you've made another change.`
+      : `Permanently delete "${name}"?`;
+    if(!(await askConfirm(warn))) return;
+    pushUndoSnapshot();
 
-  users = users.filter(u=>u!==name);
-  await saveUsers();
+    cards.forEach(c=>{
+      if(c.owner===name){
+        c.deleted = true;
+        c.updatedAt = Date.now();
+      }
+    });
+    selectedIds.clear();
+    await save();
 
-  if(users.length === 0){
-    const newName = ((await askPrompt('That was the last person on the board. Add someone to continue:')) || '').trim();
-    if(newName){
-      users = [newName];
-      currentUser = newName;
-      await saveUsers();
+    users = users.filter(u=>u!==name);
+    await saveUsers();
+
+    if(users.length === 0){
+      const newName = ((await askPrompt('That was the last person on the board. Add someone to continue:')) || '').trim();
+      if(newName){
+        users = [newName];
+        currentUser = newName;
+        await saveUsers();
+      }else{
+        currentUser = null;
+      }
     }else{
-      currentUser = null;
+      currentUser = users[0];
     }
-  }else{
-    currentUser = users[0];
-  }
-  viewingUser = null; // identity changed (your own user was just deleted) — drop any viewing state
-  await saveCurrentUser();
-  renderUserSelect();
-  render();
-});
+    viewingUser = null; // identity changed (your own user was just deleted) — drop any viewing state
+    await saveCurrentUser();
+    renderUserSelect();
+    render();
+  });
+}
 
 function setSavedIndicator(ok){
   const el = document.getElementById('saveState');
@@ -2920,6 +3552,19 @@ function render(){
   }
 
   renderBulkBar();
+
+  // Mobile shell (see "MOBILE SHELL" below) is a separate, independently
+  // laid-out UI reading the same `cards`/`users`/`currentUser` state —
+  // render() is the one place every mutation already funnels through
+  // (save, pull, delete, undo, import, sync…), so hooking in here keeps
+  // it in sync for free rather than threading a second render call
+  // through every call site above. It always runs, even when the
+  // @media switch is currently showing the desktop board instead —
+  // same reasoning as the desktop board itself being fully (re)built
+  // every render() even while covered by the mobile shell.
+  if(typeof renderMobile === 'function') renderMobile();
+
+  renderResumeUI();
 }
 
 // The Postings column expanded into a scrollable grid, with the current
@@ -3663,7 +4308,7 @@ async function synchronize(){
     setSyncIndicator('failed');
     return;
   }
-  const merged = mergeCardsAndUsers(remote.cards, remote.users);
+  const merged = mergeCardsAndUsers(remote.cards, remote.users, remote.resumes);
   cards = merged.cards;
   users = merged.users;
   if(!currentUser || !users.includes(currentUser)){
@@ -3672,6 +4317,7 @@ async function synchronize(){
   }
   await store.set(STORAGE_KEY, JSON.stringify(cards));
   await store.set(USERS_KEY, JSON.stringify(users));
+  await store.set(RESUMES_KEY, JSON.stringify(userResumes));
   const ok = await remotePushAll(cards, users);
   setSyncIndicator(ok ? 'synced' : 'failed');
   hasUnsyncedChanges = false;
@@ -3724,6 +4370,248 @@ document.getElementById('settingsClearBtn').addEventListener('click', async ()=>
 });
 
 document.getElementById('syncBtn').addEventListener('click', synchronize);
+
+// ====================================================================
+// MOBILE SHELL
+// A separate, phone-sized "create / browse / claim" UI layered on top
+// of the exact same data model, storage and sync as the desktop board
+// above, and shown automatically in its place on narrow viewports (see
+// the @media(max-width:700px) switch in <style>). Nothing here touches
+// `cards`/`users`/`currentUser` directly except through functions the
+// desktop UI already uses (pullToHopper, openModal, the paste-parse
+// flow, save/render) — this is presentation only, grafted on at the
+// one point (render()) everything already funnels through.
+// ====================================================================
+
+// Relocate a handful of desktop-topbar elements into the mobile header
+// rather than rebuilding their logic — same DOM nodes, same listeners,
+// same renderUserSelect()/updateSyncUI()/setSyncIndicator() driving
+// them, just a different parent. Safe to do unconditionally (not just
+// under the narrow-viewport media query) — these nodes simply sit
+// unused inside the hidden .m-app on wide screens.
+// Relocating these nodes is only correct while the mobile shell is
+// actually the thing on screen — moving them in unconditionally (as an
+// earlier version of this did) parked them inside #mHeaderActions,
+// which lives inside .m-app and is itself display:none above 700px,
+// silently hiding the user picker on desktop along with it. So this
+// now tracks the same @media(max-width:700px) breakpoint that toggles
+// .m-app/.topbar in CSS, and moves the nodes back to their original
+// desktop positions whenever the viewport crosses back over it —
+// covering not just load, but resizing a window or rotating a device
+// mid-session.
+(function setupMobileRelocation(){
+  const mHeaderActions = document.getElementById('mHeaderActions');
+  const mHeaderSync = document.getElementById('mHeaderSync');
+  const userPicker = document.getElementById('userPickerWrap');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const syncBtn = document.getElementById('syncBtn');
+  const syncState = document.getElementById('syncState');
+
+  // Original desktop homes, captured once before anything ever moves.
+  // userPicker's anchor is the "+From Posting/+Manual Entry" button
+  // group right after it in the topbar — that div never itself
+  // relocates, so it's always a valid insertBefore reference to
+  // restore userPicker to its exact original position (appendChild
+  // alone would instead drop it at the end, after that group).
+  const userPickerHome = userPicker ? userPicker.parentElement : null;
+  const userPickerAnchor = userPicker ? userPicker.nextSibling : null;
+  const settingsBtnHome = settingsBtn ? settingsBtn.parentElement : null;
+  const syncHome = syncBtn ? syncBtn.parentElement : null; // syncState's original parent too
+
+  function apply(isMobile){
+    if(userPicker && mHeaderActions){
+      if(isMobile) mHeaderActions.appendChild(userPicker);
+      else userPickerHome.insertBefore(userPicker, userPickerAnchor);
+    }
+    if(settingsBtn && mHeaderActions){
+      if(isMobile) mHeaderActions.appendChild(settingsBtn);
+      else settingsBtnHome.appendChild(settingsBtn);
+    }
+    if(syncBtn && mHeaderSync){
+      if(isMobile) mHeaderSync.appendChild(syncBtn);
+      else syncHome.appendChild(syncBtn);
+    }
+    if(syncState && mHeaderSync){
+      if(isMobile) mHeaderSync.appendChild(syncState);
+      else syncHome.appendChild(syncState);
+    }
+  }
+
+  const mq = window.matchMedia('(max-width: 700px)');
+  apply(mq.matches);
+  mq.addEventListener('change', (e)=> apply(e.matches));
+})();
+
+let mobileTab = 'postings'; // 'new' | 'postings' | 'hopper'
+let mobileSearchQuery = '';
+// Starts in sync with the desktop Postings Grid's own toggle so the two
+// views agree the first time either renders, but is then independent —
+// switching one doesn't flip the other.
+let mobileHideClaimed = hideClaimedPostings;
+
+function setMobileTab(tab){
+  mobileTab = tab;
+  document.querySelectorAll('.m-screen').forEach(el=>{
+    el.classList.toggle('active', el.id === 'mScreen' + tab[0].toUpperCase() + tab.slice(1));
+  });
+  document.querySelectorAll('.m-tab').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  renderMobile();
+}
+document.getElementById('mTabNew').addEventListener('click', ()=> setMobileTab('new'));
+document.getElementById('mTabPostings').addEventListener('click', ()=> setMobileTab('postings'));
+document.getElementById('mTabHopper').addEventListener('click', ()=> setMobileTab('hopper'));
+
+// Both "New" actions just forward to the existing desktop entry points
+// (the paste-overlay flow and the blank edit modal) rather than
+// reimplementing posting creation — same parsing, same validation, same
+// "Pick or add a user first" guard.
+document.getElementById('mOpenPaste').addEventListener('click', ()=>{
+  document.getElementById('openPaste').click();
+});
+document.getElementById('mOpenManual').addEventListener('click', ()=>{
+  document.getElementById('openAdd').click();
+});
+
+let mobileSearchDebounce;
+document.getElementById('mPostingsSearch').addEventListener('input', (e)=>{
+  clearTimeout(mobileSearchDebounce);
+  const val = e.target.value;
+  mobileSearchDebounce = setTimeout(()=>{ mobileSearchQuery = val; renderMobile(); }, 120);
+});
+document.getElementById('mHideClaimedCb').addEventListener('change', (e)=>{
+  mobileHideClaimed = e.target.checked;
+  renderMobile();
+});
+
+// Builds one card for either mobile list. `claimable` cards (the
+// Postings list) get a claim button wired to the same pullToHopper()
+// the desktop Pull-to-Hopper button uses; everything else (the Hopper
+// list) just shows a generic status pill. Tapping the card body
+// anywhere but the link/claim button opens the same edit modal the
+// desktop board uses.
+function buildMobileCardEl(card, {claimable, isClaimed}){
+  const col = COLUMNS.find(c=>c.key===card.column) || COLUMNS[0];
+  const el = document.createElement('div');
+  el.className = 'm-card' + (isClaimed ? ' m-card-claimed' : '');
+  el.style.setProperty('--accent', `var(--${col.key})`);
+
+  const details = [];
+  if(card.location) details.push(`<span class="detail">${escapeHtml(card.location)}</span>`);
+  if(card.salary) details.push(`<span class="detail">${escapeHtml(card.salary)}</span>`);
+  if(card.date) details.push(`<span class="detail">${fmtDate(card.date)}</span>`);
+  const reasonTag = (card.tags||[]).find(t=>t.startsWith('REJECTED:') || t.startsWith('DISCARDED:'));
+  if(reasonTag){
+    const rt = elideTagText(reasonTag);
+    details.push(`<span class="detail reason-pill"${rt.titleAttr}>${rt.display}</span>`);
+  }
+  const userTags = (card.tags||[]).filter(t=>t!==reasonTag && !t.startsWith('from:')).map(t=>{
+    const ut = elideTagText(t);
+    return `<span class="utag"${ut.titleAttr}>${ut.display}</span>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="m-card-top">
+      <div class="m-card-main">
+        <p class="m-card-company">${escapeHtml(card.company || 'Unknown company')}</p>
+        <p class="m-card-role">${escapeHtml(card.role || '')}</p>
+      </div>
+      ${card.url ? `<a href="${escapeAttr(card.url)}" target="_blank" class="m-card-link" title="View posting">↗</a>` : ''}
+    </div>
+    ${details.length ? `<div class="m-card-details">${details.join('')}</div>` : ''}
+    ${userTags ? `<div class="m-card-tags">${userTags}</div>` : ''}
+    <div class="m-card-actions">
+      ${claimable
+        ? (isClaimed
+            ? `<span class="m-claimed-pill">✓ In your Hopper</span>`
+            : `<button class="m-claim-btn" data-claim="${card.id}">Claim → My Hopper</button>`)
+        : `<span class="m-status-pill">Tap to update status</span>`}
+    </div>
+  `;
+
+  const claimBtn = el.querySelector('[data-claim]');
+  if(claimBtn){
+    claimBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      pullToHopper(card.id);
+    });
+  }
+  el.addEventListener('click', (e)=>{
+    if(e.target.closest('a')) return;
+    if(e.target.closest('[data-claim]')) return;
+    openModal(card);
+  });
+  return el;
+}
+
+function renderMobilePostingsList(){
+  const listEl = document.getElementById('mPostingsList');
+  if(!listEl) return;
+  const claimedSourceIds = new Set(
+    liveCards().filter(c=> c.owner===currentUser && c.sourceId).map(c=>c.sourceId)
+  );
+  let postings = liveCards().filter(c=> c.column === 'postings');
+  const q = mobileSearchQuery.trim().toLowerCase();
+  if(q){
+    postings = postings.filter(c=>{
+      const hay = [c.role, c.company, c.location, c.notes, ...(c.tags||[])].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }
+  if(mobileHideClaimed){
+    postings = postings.filter(c=> !claimedSourceIds.has(c.id));
+  }
+  postings.sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
+
+  listEl.innerHTML = '';
+  if(postings.length === 0){
+    listEl.innerHTML = `<div class="m-list-empty">${q || mobileHideClaimed ? 'no matches here' : 'nothing posted yet — add one from the New tab'}</div>`;
+    return;
+  }
+  postings.forEach(card=>{
+    listEl.appendChild(buildMobileCardEl(card, {claimable:true, isClaimed: claimedSourceIds.has(card.id)}));
+  });
+}
+
+function renderMobileHopperList(){
+  const listEl = document.getElementById('mHopperList');
+  const titleEl = document.getElementById('mHopperTitle');
+  if(!listEl) return;
+  if(titleEl) titleEl.textContent = hopperLabel();
+  let hopperCards = liveCards().filter(c=> c.column === 'hopper' && c.owner === currentUser);
+  hopperCards.sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
+
+  listEl.innerHTML = '';
+  if(hopperCards.length === 0){
+    listEl.innerHTML = `<div class="m-list-empty">nothing claimed yet — claim a posting from the Postings tab</div>`;
+    return;
+  }
+  hopperCards.forEach(card=>{
+    listEl.appendChild(buildMobileCardEl(card, {claimable:false}));
+  });
+}
+
+function renderMobile(){
+  if(!document.getElementById('mApp')) return;
+  document.getElementById('mHideClaimedCb').checked = mobileHideClaimed;
+
+  const unclaimedCount = liveCards().filter(c=>{
+    if(c.column !== 'postings') return false;
+    return !liveCards().some(h=> h.owner===currentUser && h.sourceId===c.id);
+  }).length;
+  const hint = document.getElementById('mNewHint');
+  if(hint){
+    hint.textContent = currentUser
+      ? `${unclaimedCount} unclaimed posting${unclaimedCount===1?'':'s'} waiting on the Postings tab`
+      : 'Pick or add a user (top right) before claiming postings';
+  }
+
+  renderMobilePostingsList();
+  renderMobileHopperList();
+}
+
+setMobileTab('postings');
 
 load().catch(e=>{
   console.error('load() failed:', e);
