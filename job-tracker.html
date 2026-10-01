@@ -69,6 +69,31 @@
     color:var(--paper-dim);
   }
   .stats b{ color:var(--paper); font-weight:500; }
+  .stats-wrap{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+  }
+  /* One connected bar beneath the counts, divided into a segment per
+     column using the same fillPct() proportions as that column's own
+     header fill. flex-grow:<pct> with a shared flex-basis of 0 is the
+     "fr unit" trick — it always exactly fills the bar's width, scaled
+     relative to the other segments, rather than plotting each pct on an
+     absolute 0-100 scale (which would often overflow, since Postings'
+     claim-rate and the other columns' claimed-share percentages come
+     from different denominators and don't sum to a clean 100 together). */
+  .stats-fill-bar{
+    display:flex;
+    height:6px;
+    border-radius:3px;
+    overflow:hidden;
+    background:var(--hairline);
+  }
+  .stats-fill-bar .seg{
+    flex-shrink:0;
+    flex-basis:0;
+    height:100%;
+  }
   .add-btn{
     background:var(--brass);
     color:#1b1e24;
@@ -173,12 +198,12 @@
   .reset-widths-label{
     line-height:1;
   }
-  @keyframes sync-pulse{
+  @keyframes sync-text-pulse{
     0%, 100% { opacity:0.35; }
     50% { opacity:1; }
   }
   #syncState.sync-pulse{
-    animation: sync-pulse 1.1s ease-in-out infinite;
+    animation: sync-text-pulse 1.1s ease-in-out infinite;
   }
   .controlbar input[type="text"]{
     flex:1;
@@ -524,6 +549,8 @@
   }
   .column.drag-over{ border-color:var(--brass); }
   .col-tab{
+    position:relative;
+    overflow:hidden; /* clips .col-fill to the header's own rounded corners */
     display:flex;
     align-items:center;
     justify-content:space-between;
@@ -533,7 +560,25 @@
     border-radius:4px 4px 0 0;
     flex-shrink:0;
   }
+  /* Column-size fill: a left-aligned bar behind the header text, as wide as
+     this column's share of postings. Positioned (not a static flow child),
+     so it never affects the header's layout; kept behind the text via
+     z-index rather than DOM order, since absolutely-positioned siblings
+     otherwise paint above static ones regardless of markup order. Text
+     stacks above it regardless of opacity, so this can run bright without
+     hurting readability. */
+  .col-fill{
+    position:absolute;
+    left:0; top:0; bottom:0;
+    z-index:0;
+    background:var(--accent);
+    opacity:0.5;
+    pointer-events:none;
+    transition:width 0.25s ease;
+  }
   .col-tab .name{
+    position:relative;
+    z-index:1;
     font-family:'Fraunces',serif;
     font-size:14.5px;
     font-weight:500;
@@ -597,6 +642,8 @@
     max-width:320px;
   }
   .col-tab .count{
+    position:relative;
+    z-index:1;
     font-family:'IBM Plex Mono',monospace;
     font-size:11px;
     color:var(--paper-dim);
@@ -854,6 +901,7 @@
   .column[data-col="offer"]{ --accent: var(--offer); }
   .column[data-col="closed"]{ --accent: var(--closed); }
   .column[data-col="passed"]{ --accent: var(--passed); }
+  .column[data-col="expired"]{ --accent: var(--expired); }
   .column[data-col="discarded"]{ --accent: var(--discarded); }
   .card[data-col="postings"]{
     --accent: var(--postings);
@@ -1009,7 +1057,10 @@
     <span id="syncState" style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim); min-width:60px; margin-left:8px;"></span>
   </div>
   <div class="toprow">
-    <div class="stats" id="stats"></div>
+    <div class="stats-wrap">
+      <div class="stats" id="stats"></div>
+      <div class="stats-fill-bar" id="statsFillBar"></div>
+    </div>
     <span id="saveState" style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim); min-width:70px;"></span>
     <button class="add-btn" id="undoBtn" disabled title="Undo the last change" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline);">↶ Undo</button>
     <button class="add-btn" id="exportBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline);">Export</button>
@@ -2336,13 +2387,71 @@ function render(){
     return visibleCards.filter(c=>c.column===col.key && c.owner===currentUser);
   }
 
+  // Column counts as currently displayed (respects hideClaimedPostings for
+  // Postings, and search/tag filters for everyone) — used for the header
+  // numbers themselves and for every non-Postings fill percentage below.
+  const columnCounts = {};
+  COLUMNS.forEach(c=>{ columnCounts[c.key] = poolFor(c).length; });
+
+  // Postings' OWN header fill is defined differently from every other
+  // column: "what percentage of all postings has this user claimed" —
+  // pulling a posting clones it into the user's own column rather than
+  // moving it, so the shared Postings pool never shrinks when claimed; a
+  // card only counts as claimed via claimedSourceIds (it owns a clone with
+  // sourceId pointing at it). This must hold steady regardless of the
+  // Hide-my-claimed toggle — that toggle only controls what's *visible* in
+  // the column body, not how "claimed" Postings is meant to read — so it's
+  // computed from the raw postings pool, bypassing hideClaimedPostings
+  // (while still respecting search/tag filters, like everything else here).
+  const rawPostingsCards = visibleCards.filter(c=> c.column === 'postings');
+  const rawPostingsCount = rawPostingsCards.length;
+  const claimedPostingsCount = rawPostingsCards.filter(c=> claimedSourceIds.has(c.id)).length;
+  const postingsClaimedPct = rawPostingsCount > 0 ? Math.min(100, claimedPostingsCount / rawPostingsCount * 100) : 0;
+
+  // Every other column's header fill: its own share of everything this
+  // user has claimed, i.e. the total currently sitting across all of
+  // their own (non-Postings) columns.
+  const claimedTotalForFill = COLUMNS.reduce((sum,c)=> c.key==='postings' ? sum : sum + columnCounts[c.key], 0);
+  function fillPct(colKey){
+    if(colKey === 'postings') return postingsClaimedPct;
+    return claimedTotalForFill > 0 ? Math.min(100, columnCounts[colKey] / claimedTotalForFill * 100) : 0;
+  }
+
+  // The single summary bar (#statsFillBar, below) is a deliberately
+  // *different* breakdown of the same whole: every postings card is either
+  // still unclaimed (sitting in Postings) or already claimed (visualized
+  // in exactly one later column) — so the bar's segments are built to sum
+  // to exactly 100%, unlike the header fills above. Postings' own segment
+  // there is the UNCLAIMED share — the complement of its header fill,
+  // which shows the CLAIMED share — and every other column's segment is
+  // its slice of claimedTotalForFill, scaled down so all the claimed
+  // columns collectively cover exactly postingsClaimedPct of the bar
+  // (not 100% of it on their own). unclaimed% + sum(claimed-column %) then
+  // always equals 100%.
+  function barPct(colKey){
+    if(colKey === 'postings') return Math.max(0, 100 - postingsClaimedPct);
+    return claimedTotalForFill > 0 ? (columnCounts[colKey] / claimedTotalForFill) * postingsClaimedPct : 0;
+  }
+
   statsEl.innerHTML = COLUMNS.map(c=>{
-    const n = poolFor(c).length;
+    const n = columnCounts[c.key];
     const label = c.key === 'hopper'
       ? (currentUser ? `in ${currentUser}'s hopper` : 'in my hopper')
       : c.label.toLowerCase();
     return `<span><b>${n}</b> ${label}</span>`;
   }).join('');
+
+  // One connected bar under the stats line — see barPct above for why its
+  // segments use a different (sum-to-100%) breakdown than the per-column
+  // header fills do.
+  const statsFillBarEl = document.getElementById('statsFillBar');
+  if(statsFillBarEl){
+    statsFillBarEl.innerHTML = COLUMNS.map(c=>{
+      const pct = barPct(c.key);
+      const segLabel = c.key === 'hopper' ? hopperLabel() : c.key === 'discarded' ? discardedLabel() : c.label;
+      return `<div class="seg" style="flex-grow:${pct}; background:var(--${c.key});" title="${escapeHtml(segLabel)}: ${pct.toFixed(1)}%"></div>`;
+    }).join('');
+  }
 
   // Builds one fully-wired card element. Reused by both the normal narrow
   // column lists and the wide Postings grid — `highlightEl` is whichever
@@ -2576,6 +2685,7 @@ function render(){
     colEl.dataset.col = col.key;
     colEl.innerHTML = `
       <div class="col-tab">
+        <div class="col-fill" style="width:${fillPct(col.key).toFixed(2)}%"></div>
         <span class="name">${col.key === 'hopper' ? hopperLabel() : col.key === 'discarded' ? discardedLabel() : col.label}${col.shared ? '<span class="shared-mark">shared</span>' : ''}</span>
         <span class="count">${colCards.length}</span>
       </div>
@@ -2626,7 +2736,7 @@ function render(){
   }
 
   if(currentView === 'postings'){
-    renderPostingsView(board, poolFor, buildCardEl, wireDropZone, buildColumnEl);
+    renderPostingsView(board, poolFor, buildCardEl, wireDropZone, buildColumnEl, fillPct);
   }else{
     COLUMNS.forEach(col=>{
       const colEl = buildColumnEl(col);
@@ -2645,7 +2755,7 @@ function render(){
 // The Postings column expanded into a scrollable grid, with the current
 // user's Discarded column still visible alongside it (reusing the exact
 // same narrow-column builder as board view, for a consistent look/behavior).
-function renderPostingsView(board, poolFor, buildCardEl, wireDropZone, buildColumnEl){
+function renderPostingsView(board, poolFor, buildCardEl, wireDropZone, buildColumnEl, fillPct){
   const postingsCol = COLUMNS.find(c=>c.key==='postings');
   const discardedCol = COLUMNS.find(c=>c.key==='discarded');
 
@@ -2656,6 +2766,7 @@ function renderPostingsView(board, poolFor, buildCardEl, wireDropZone, buildColu
   mainEl.className = 'postings-view-main';
   mainEl.innerHTML = `
     <div class="col-tab">
+      <div class="col-fill" style="width:${fillPct('postings').toFixed(2)}%"></div>
       <span class="name">Postings<span class="shared-mark">shared</span></span>
       <span class="count">${gridCards.length}</span>
     </div>
