@@ -25,6 +25,21 @@
     --passed: #756e63;
     --expired: #8f7f4f;
     --discarded: #5c564c;
+    /* Lightened, text-safe versions of the column colors above, for use
+       as foreground text on the dark --bg (header stats line) rather than
+       as borders/backgrounds — several of the base colors (discarded,
+       closed, postings) sit under WCAG's 4.5:1 contrast minimum against
+       --bg on their own. Mix ratios individually tuned so every one
+       clears ~4.5:1 while staying recognizably the same hue. */
+    --postings-text: color-mix(in srgb, var(--postings) 80%, white);
+    --hopper-text: color-mix(in srgb, var(--hopper) 90%, white);
+    --applied-text: var(--applied);
+    --interviewing-text: color-mix(in srgb, var(--interviewing) 95%, white);
+    --offer-text: var(--offer);
+    --closed-text: color-mix(in srgb, var(--closed) 80%, white);
+    --passed-text: color-mix(in srgb, var(--passed) 85%, white);
+    --expired-text: color-mix(in srgb, var(--expired) 95%, white);
+    --discarded-text: color-mix(in srgb, var(--discarded) 70%, white);
   }
   *{box-sizing:border-box;}
   html, body{
@@ -130,7 +145,7 @@
     0%, 100% { box-shadow: 0 0 0 0 rgba(201,163,93,0.55); }
     50% { box-shadow: 0 0 0 7px rgba(201,163,93,0); }
   }
-  .toprow{ display:flex; align-items:center; flex-wrap:wrap; gap:0; }
+  .toprow{ display:flex; align-items:baseline; flex-wrap:wrap; gap:0; }
 
   .user-picker{
     display:flex;
@@ -203,7 +218,19 @@
     50% { opacity:1; }
   }
   #syncState.sync-pulse{
-    animation: sync-text-pulse 1.1s ease-in-out infinite;
+    animation: sync-text-pulse 1.7s ease-in-out infinite; /* matches #syncBtn.sync-dirty's sync-pulse rate above */
+  }
+  #syncState{
+    display:inline-block;
+    border:1px solid var(--brass-dim);
+    border-radius:999px;
+    padding:4px 12px 4px 16px;
+  }
+  /* No sync state to show (sync isn't configured, or between states) —
+     keep the box's footprint so nothing else in the header shifts, but
+     hide its outline rather than showing an empty bordered box. */
+  #syncState:empty{
+    border-color:transparent;
   }
   .controlbar input[type="text"]{
     flex:1;
@@ -569,7 +596,7 @@
      hurting readability. */
   .col-fill{
     position:absolute;
-    left:0; top:0; bottom:0;
+    right:0; top:0; bottom:0;
     z-index:0;
     background:var(--accent);
     opacity:0.5;
@@ -1056,8 +1083,8 @@
       <button class="add-btn entry-btn" id="openPaste">+ From Posting</button>
       <button class="add-btn entry-btn" id="openAdd">+ Manual Entry</button>
     </div>
-    <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; display:none; font-size:16px; padding:14px 26px; font-weight:700; margin-left:18px;">⇄ Synchronize</button>
-    <span id="syncState" style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim); min-width:60px; margin-left:8px;"></span>
+    <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; display:none; margin-left:18px;">⇄ Synchronize</button>
+    <span id="syncState" style="min-width:60px; margin-left:8px; white-space:nowrap; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim);"></span>
   </div>
   <div class="toprow">
     <div class="user-picker viewing-picker" id="viewingWrap" style="padding-left:0; border-left:none; margin-right:16px;">
@@ -1069,11 +1096,13 @@
       <div class="stats-fill-bar" id="statsFillBar"></div>
     </div>
     <span id="saveState" style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim); min-width:70px;"></span>
-    <button class="add-btn" id="undoBtn" disabled title="Undo the last change" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline);">↶ Undo</button>
-    <button class="add-btn" id="exportBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline);">Export</button>
-    <button class="add-btn" id="importBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline);">Import</button>
+    <button class="add-btn" id="undoBtn" disabled title="Undo the last change" style="border-radius:999px;">↶ Undo</button>
+    <div style="display:flex; gap:0; margin-left:20px;">
+      <button class="add-btn" id="exportBtn" style="border-radius:999px 0 0 999px; margin-left:0;">Export</button>
+      <button class="add-btn" id="importBtn" style="border-radius:0 999px 999px 0; margin-left:0;">Import</button>
+    </div>
     <input type="file" id="importFile" accept="application/json" style="display:none;" />
-    <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:16px;">⚙</button>
+    <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:24px; padding:8px 10px;">⚙</button>
   </div>
 </div>
 
@@ -2527,13 +2556,13 @@ function render(){
   statsEl.innerHTML = COLUMNS.map(c=>{
     if(c.key === 'postings'){
       const n = Math.max(0, rawPostingsCount - claimedPostingsCount);
-      return `<span><b>${n}</b> unclaimed postings</span>`;
+      return `<span><b style="color:var(--postings-text)">${n}</b> unclaimed postings</span>`;
     }
     const n = columnCounts[c.key];
     const label = c.key === 'hopper'
       ? (viewedUser ? `in ${viewedUser}'s hopper` : 'in my hopper')
       : c.label.toLowerCase();
-    return `<span><b>${n}</b> ${label}</span>`;
+    return `<span><b style="color:var(--${c.key}-text)">${n}</b> ${label}</span>`;
   }).join('');
 
   // One connected bar under the stats line — see barPct above for why its
