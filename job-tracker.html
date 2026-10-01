@@ -1174,8 +1174,43 @@
     flex:1;
     min-height:0;
     display:flex;
+    flex-direction:row;
+    position:relative;
+  }
+  .m-main-content{
+    flex:1;
+    min-width:0;
+    min-height:0;
+    display:flex;
     flex-direction:column;
     position:relative;
+  }
+  /* Narrow vertical twin of the desktop's #statsFillBar — same per-column
+     segments, same colors, just stacked top-to-bottom instead of laid out
+     left-to-right (flex-grow still does the proportional sizing; column
+     direction turns that into a height share instead of a width share).
+     Lives as a sibling of .m-main-content rather than inside any one
+     .m-screen, so it stays put across all three tabs. */
+  .m-side-bar{
+    flex-shrink:0;
+    /* Content area ends up width minus the horizontal padding and the
+       border — 14px - (4px*2 padding) - 1px border = 5px of actual
+       visible stripe. Sized this way (rather than padding:0) so the
+       segments don't butt right up against the border/edge. */
+    width:14px;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    padding:10px 4px;
+    box-sizing:border-box;
+    background:var(--panel);
+    border-left:1px solid var(--hairline);
+  }
+  .m-side-bar .seg{
+    flex-shrink:0;
+    flex-basis:0;
+    width:100%;
+    border-radius:1px;
   }
   .m-screen{
     display:none;
@@ -1446,39 +1481,49 @@
   </div>
 
   <main class="m-main" id="mMain">
-    <section class="m-screen" id="mScreenPostings">
-      <div class="m-screen-head">
-        <input type="text" id="mPostingsSearch" placeholder="Search postings…" />
-        <label class="m-claimed-toggle">
-          <input type="checkbox" id="mHideClaimedCb" />
-          <span>Hide claimed</span>
-        </label>
-      </div>
-      <div class="m-list" id="mPostingsList"></div>
-    </section>
+    <div class="m-main-content">
+      <section class="m-screen" id="mScreenPostings">
+        <div class="m-screen-head">
+          <input type="text" id="mPostingsSearch" placeholder="Search postings…" />
+          <label class="m-claimed-toggle">
+            <input type="checkbox" id="mHideClaimedCb" />
+            <span>Hide claimed</span>
+          </label>
+        </div>
+        <div class="m-list" id="mPostingsList"></div>
+      </section>
 
-    <section class="m-screen" id="mScreenNew">
-      <div class="m-new-actions">
-        <button class="m-big-btn m-big-btn-primary" id="mOpenPaste">
-          <span class="m-big-btn-icon">📋</span>
-          <span class="m-big-btn-label">Paste from Posting</span>
-          <span class="m-big-btn-sub">Paste a link or the listing text — we'll parse the details</span>
-        </button>
-        <button class="m-big-btn" id="mOpenManual">
-          <span class="m-big-btn-icon">✎</span>
-          <span class="m-big-btn-label">Manual Entry</span>
-          <span class="m-big-btn-sub">Fill in role, company and details yourself</span>
-        </button>
-      </div>
-      <p class="m-new-hint" id="mNewHint"></p>
-    </section>
+      <section class="m-screen" id="mScreenNew">
+        <div class="m-new-actions">
+          <button class="m-big-btn m-big-btn-primary" id="mOpenPaste">
+            <span class="m-big-btn-icon">📋</span>
+            <span class="m-big-btn-label">Paste from Posting</span>
+            <span class="m-big-btn-sub">Paste a link or the listing text — we'll parse the details</span>
+          </button>
+          <button class="m-big-btn" id="mOpenManual">
+            <span class="m-big-btn-icon">✎</span>
+            <span class="m-big-btn-label">Manual Entry</span>
+            <span class="m-big-btn-sub">Fill in role, company and details yourself</span>
+          </button>
+        </div>
+        <p class="m-new-hint" id="mNewHint"></p>
+      </section>
 
-    <section class="m-screen" id="mScreenHopper">
-      <div class="m-screen-head">
-        <span class="m-screen-title" id="mHopperTitle">My Hopper</span>
-      </div>
-      <div class="m-list" id="mHopperList"></div>
-    </section>
+      <section class="m-screen" id="mScreenHopper">
+        <div class="m-screen-head">
+          <span class="m-screen-title" id="mHopperTitle">My Hopper</span>
+        </div>
+        <div class="m-list" id="mHopperList"></div>
+      </section>
+    </div>
+
+    <!-- Vertical twin of the desktop's #statsFillBar (same segments, same
+         data, just column-oriented instead of row-oriented) — spans the
+         full height of .m-main so it's visible no matter which of the
+         three tabs/screens above is active, rather than belonging to any
+         one of them. Populated by the same render() code that builds
+         #statsFillBar; see the comment there. -->
+    <div class="m-side-bar" id="mSideBar"></div>
   </main>
 
   <nav class="m-tabbar">
@@ -3237,24 +3282,30 @@ function render(){
 
   // One connected bar under the stats line — see barPct above for why its
   // segments use a different (sum-to-100%) breakdown than the per-column
-  // header fills do.
+  // header fills do. The same markup drives both the desktop bar
+  // (#statsFillBar, row-oriented) and its mobile twin (#mSideBar, a
+  // narrow column-oriented stripe pinned to the right edge of the phone
+  // shell, present behind all three mobile tabs) — the segments are
+  // identical divs either way, only the parent's flex-direction decides
+  // whether flex-grow distributes width or height.
+  const statsSegHtml = COLUMNS.map(c=>{
+    const pct = barPct(c.key);
+    const segLabel = c.key === 'hopper' ? hopperLabel() : c.key === 'discarded' ? discardedLabel() : c.label;
+    return { pct, segLabel, key: c.key };
+  })
+    // A 0%-width (or 0%-height) column still becomes a flex item, and
+    // `gap` renders between every pair of adjacent items whether or not
+    // either one has any size — so a zero-size segment sitting between
+    // two real ones produced what looked like a doubled-up gap. Dropping
+    // empty segments entirely means `gap` only ever appears between
+    // segments that actually have size.
+    .filter(seg => seg.pct > 0)
+    .map(seg => `<div class="seg" style="flex-grow:${seg.pct}; background:var(--${seg.key});" title="${escapeHtml(seg.segLabel)}: ${seg.pct.toFixed(1)}%"></div>`)
+    .join('');
   const statsFillBarEl = document.getElementById('statsFillBar');
-  if(statsFillBarEl){
-    statsFillBarEl.innerHTML = COLUMNS.map(c=>{
-      const pct = barPct(c.key);
-      const segLabel = c.key === 'hopper' ? hopperLabel() : c.key === 'discarded' ? discardedLabel() : c.label;
-      return { pct, segLabel, key: c.key };
-    })
-      // A 0%-width column still becomes a flex item, and `gap` renders
-      // between every pair of adjacent items whether or not either one
-      // has any width — so a zero-width segment sitting between two real
-      // ones produced what looked like a doubled-up gap. Dropping empty
-      // segments entirely means `gap` only ever appears between segments
-      // that actually have width.
-      .filter(seg => seg.pct > 0)
-      .map(seg => `<div class="seg" style="flex-grow:${seg.pct}; background:var(--${seg.key});" title="${escapeHtml(seg.segLabel)}: ${seg.pct.toFixed(1)}%"></div>`)
-      .join('');
-  }
+  if(statsFillBarEl) statsFillBarEl.innerHTML = statsSegHtml;
+  const mSideBarEl = document.getElementById('mSideBar');
+  if(mSideBarEl) mSideBarEl.innerHTML = statsSegHtml;
 
   // Builds one fully-wired card element. Reused by both the normal narrow
   // column lists and the wide Postings grid — `highlightEl` is whichever
