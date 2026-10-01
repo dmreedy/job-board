@@ -1083,7 +1083,7 @@
       <button class="add-btn entry-btn" id="openPaste">+ From Posting</button>
       <button class="add-btn entry-btn" id="openAdd">+ Manual Entry</button>
     </div>
-    <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; display:none; margin-left:18px;">⇄ Synchronize</button>
+    <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; display:none; margin-left:18px;">⇄ Synchronize Now</button>
     <span id="syncState" style="min-width:60px; margin-left:8px; white-space:nowrap; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim);"></span>
   </div>
   <div class="toprow">
@@ -1670,11 +1670,26 @@ async function remotePushAll(cardsArr, usersArr){
   return ok;
 }
 
+// Whether a sync is actively in flight right now (drives the pulsing
+// "syncing…" pill). Separate from hasUnsyncedChanges, which just means
+// "there's something a sync would push" and drives the "changes pending"
+// pill when nothing more urgent (syncing, or a just-finished synced/failed
+// flash) is already occupying it.
+let isSyncing = false;
+// True while a synced/failed/syncing message owns the pill and shouldn't
+// be clobbered by a routine "changes pending" refresh from updateSyncUI.
+// Cleared when that message's own lifecycle ends (the synced flash times
+// out, or the next explicit setSyncIndicator call moves past it).
+let pillLocked = false;
+
 function setSyncIndicator(state){
-  // state: 'synced' | 'failed' | 'off' | 'syncing'
+  // state: 'synced' | 'failed' | 'off' | 'syncing' | 'pending'
   const el = document.getElementById('syncState');
   if(!el) return;
+  clearTimeout(setSyncIndicator._t);
   if(state === 'off'){
+    isSyncing = false;
+    pillLocked = false;
     el.textContent = '';
     el.title = '';
     el.style.cursor = 'default';
@@ -1682,6 +1697,8 @@ function setSyncIndicator(state){
     return;
   }
   if(state === 'syncing'){
+    isSyncing = true;
+    pillLocked = true;
     el.textContent = 'syncing…';
     el.style.color = 'var(--paper-dim)';
     el.title = '';
@@ -1689,15 +1706,34 @@ function setSyncIndicator(state){
     el.classList.add('sync-pulse');
     return;
   }
+  isSyncing = false;
+  if(state === 'pending'){
+    pillLocked = false;
+    el.classList.remove('sync-pulse');
+    el.textContent = 'changes pending';
+    el.style.color = 'var(--paper-dim)';
+    el.title = 'You have local changes not yet pushed to the shared Sheet';
+    el.style.cursor = 'default';
+    return;
+  }
+  // 'synced' or 'failed'
+  pillLocked = true;
   el.classList.remove('sync-pulse');
   el.textContent = state === 'synced' ? 'synced' : 'sync failed (tap for detail)';
   el.style.color = state === 'synced' ? 'var(--paper-dim)' : '#e0a292';
   el.title = state === 'failed' ? (lastSyncError || 'Unknown error') : '';
   el.style.cursor = state === 'failed' ? 'help' : 'default';
   if(state === 'synced'){
-    clearTimeout(setSyncIndicator._t);
-    setSyncIndicator._t = setTimeout(()=>{ el.textContent = ''; }, 1600);
+    // Flash "synced" briefly, then hand the pill back to whatever's
+    // actually true afterward — still-pending changes if any landed
+    // while the flash was showing, otherwise empty.
+    setSyncIndicator._t = setTimeout(()=>{
+      pillLocked = false;
+      setSyncIndicator(hasUnsyncedChanges ? 'pending' : 'off');
+    }, 1600);
   }
+  // 'failed' stays put (no timeout) until the next explicit sync attempt
+  // or state change — it's worth keeping visible/clickable.
 }
 document.getElementById('syncState').addEventListener('click', ()=>{
   if(lastSyncError) showAlertModal(`Last sync error:\n\n${lastSyncError}`);
@@ -3604,10 +3640,15 @@ function updateSyncUI(){
   const btn = document.getElementById('syncBtn');
   btn.style.display = syncUrl ? 'inline-block' : 'none';
   btn.classList.toggle('sync-dirty', !!hasUnsyncedChanges);
-  btn.textContent = hasUnsyncedChanges ? '⇄ Synchronize now — changes pending' : '⇄ Synchronize';
-  btn.title = hasUnsyncedChanges
-    ? 'You have local changes not yet pushed to the shared Sheet'
-    : 'Pull others\' changes and push yours';
+  btn.textContent = '⇄ Synchronize Now';
+  btn.title = 'Pull others\' changes and push yours';
+  // Keep the pill's "changes pending" state in sync with hasUnsyncedChanges,
+  // but never stomp on a sync that's actively running or a synced/failed
+  // flash that's still showing — those own the pill until their own
+  // lifecycle hands it back (see setSyncIndicator).
+  if(!pillLocked && !isSyncing){
+    setSyncIndicator(hasUnsyncedChanges ? 'pending' : 'off');
+  }
 }
 
 // Pull remote, merge with local (last-write-wins per card, deduped Postings),
