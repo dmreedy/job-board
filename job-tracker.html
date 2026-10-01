@@ -146,7 +146,7 @@
     0%, 100% { box-shadow: 0 0 0 0 rgba(201,163,93,0.55); }
     50% { box-shadow: 0 0 0 7px rgba(201,163,93,0); }
   }
-  .toprow{ display:flex; align-items:baseline; flex-wrap:wrap; gap:0; }
+  .toprow{ display:flex; align-items:center; flex-wrap:wrap; gap:14px; }
 
   .user-picker{
     display:flex;
@@ -1527,12 +1527,12 @@
     </div>
     <span id="saveState" style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim); min-width:70px;"></span>
     <button class="add-btn" id="undoBtn" disabled title="Undo the last change" style="border-radius:999px;">↶ Undo</button>
-    <div style="display:flex; gap:0; margin-left:20px;">
+    <div style="display:flex; gap:0;">
       <button class="add-btn" id="exportBtn" style="border-radius:999px 0 0 999px; margin-left:0;">Export</button>
       <button class="add-btn" id="importBtn" style="border-radius:0 999px 999px 0; margin-left:0;">Import</button>
     </div>
     <input type="file" id="importFile" accept="application/json" style="display:none;" />
-    <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:24px; padding:8px 10px;">⚙</button>
+    <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:15px; display:flex; align-items:center;">⚙</button>
   </div>
 </div>
 
