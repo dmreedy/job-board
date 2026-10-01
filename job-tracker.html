@@ -683,6 +683,9 @@
     z-index:0;
     cursor:grab;
   }
+  /* Someone else's board, viewed via the Viewing dropdown — not draggable,
+     not selectable, not clickable to edit. */
+  .card.read-only{ cursor:default; }
   /* Carries the fade instead of .card itself — .pull-btn deliberately sits
      outside this wrapper (see template) so it stays fully opaque even in
      the faded zone, since mask-image affects an element's whole subtree
@@ -1057,6 +1060,10 @@
     <span id="syncState" style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim); min-width:60px; margin-left:8px;"></span>
   </div>
   <div class="toprow">
+    <div class="user-picker viewing-picker" id="viewingWrap" style="padding-left:0; border-left:none; margin-right:16px;">
+      <label>Viewing</label>
+      <select id="viewingUserSelect"></select>
+    </div>
     <div class="stats-wrap">
       <div class="stats" id="stats"></div>
       <div class="stats-fill-bar" id="statsFillBar"></div>
@@ -1346,6 +1353,13 @@ const LAST_SYNC_KEY = 'job-tracker-last-sync-at';
 let cards = [];
 let users = [];
 let currentUser = null;
+// Which user's personal columns (Hopper/Applied/.../Discarded) are
+// currently on screen — session-only, like columnWidths/searchQuery.
+// null means "viewing myself", i.e. same as currentUser. Kept entirely
+// separate from currentUser: identity-bearing actions (new cards, pulling
+// a posting, deleting a user) always use currentUser, never this — see
+// effectiveViewUser() and its call sites.
+let viewingUser = null;
 let editingId = null;
 let activeTagFilters = [];
 let searchQuery = '';
@@ -1403,15 +1417,28 @@ let recentlyChangedIds = new Set(); // cards touched since lastSyncAt, for highl
 let syncUrl = null;
 let syncSecret = null;
 
+// Whichever user's personal columns should currently be on screen: the
+// person picked in the Viewing dropdown, falling back to currentUser (also
+// covers viewingUser pointing at a user who's since been deleted). This is
+// the ONLY thing poolFor/hopperLabel/discardedLabel/the stats pivot on —
+// it never substitutes for currentUser in anything identity-bearing
+// (new cards, pulling a posting, deleting a user all still use currentUser
+// directly, so viewing someone else's board never risks acting as them).
+function effectiveViewUser(){
+  return (viewingUser && users.includes(viewingUser)) ? viewingUser : currentUser;
+}
+
 // Cards are soft-deleted (tombstoned), not removed outright — this is what
 // lets a deletion actually propagate to other instances on Synchronize.
 // Anywhere the board displays or reasons about "what exists", use this.
 function hopperLabel(){
-  return currentUser ? `${currentUser}'s Hopper` : 'My Hopper';
+  const u = effectiveViewUser();
+  return u ? `${u}'s Hopper` : 'My Hopper';
 }
 
 function discardedLabel(){
-  return currentUser ? `Discarded by ${currentUser}` : 'Discarded';
+  const u = effectiveViewUser();
+  return u ? `Discarded by ${u}` : 'Discarded';
 }
 
 function liveCards(){
@@ -1465,18 +1492,42 @@ function renderFilterbar(){
 
 const hasClaudeStorage = typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function';
 
+// window.storage (when present — e.g. viewing this file in Claude.ai's own
+// in-chat/artifact preview) is a separate hosted backend from this app's
+// normal persistence and can return its own server-side errors ("Internal
+// server error while processing action") independent of anything this code
+// does. The real deployment (this file opened directly in a browser, or
+// hosted anywhere outside Claude.ai) never has window.storage at all and
+// always uses plain localStorage below, which isn't subject to that.
+// Rather than just failing the save/load outright the first time
+// window.storage errors, fall back to localStorage for the rest of the
+// session — strictly better than losing the write, even though it does
+// mean: if window.storage later recovers, a fresh page load would read
+// from it again and could appear to "lose" anything saved locally during
+// the fallback window. A one-time console warning marks when this happens.
+let claudeStorageBroken = false;
 const store = {
   async get(key){
-    if(hasClaudeStorage){
-      return window.storage.get(key);
+    if(hasClaudeStorage && !claudeStorageBroken){
+      try{
+        return await window.storage.get(key);
+      }catch(e){
+        claudeStorageBroken = true;
+        console.warn('window.storage.get failed — falling back to localStorage for the rest of this session:', e);
+      }
     }
     const raw = window.localStorage.getItem(key);
     if(raw === null) return null;
     return { key, value: raw };
   },
   async set(key, value){
-    if(hasClaudeStorage){
-      return window.storage.set(key, value);
+    if(hasClaudeStorage && !claudeStorageBroken){
+      try{
+        return await window.storage.set(key, value);
+      }catch(e){
+        claudeStorageBroken = true;
+        console.warn('window.storage.set failed — falling back to localStorage for the rest of this session:', e);
+      }
     }
     window.localStorage.setItem(key, value);
     return { key, value };
@@ -2117,6 +2168,21 @@ function renderUserSelect(){
   sel.innerHTML = users.map(u=>`<option value="${escapeAttr(u)}">${escapeHtml(u)}</option>`).join('')
     + `<option value="__add__">+ Add person…</option>`;
   sel.value = currentUser || (users[0] || '');
+  renderViewingUserSelect();
+}
+
+// Kept in sync here (rather than at each of renderUserSelect's own call
+// sites) so the Viewing list and its selection never drift from the real
+// user list or from currentUser, however the board got here. "(myself)"
+// always maps to viewingUser = null — see effectiveViewUser().
+function renderViewingUserSelect(){
+  const sel = document.getElementById('viewingUserSelect');
+  if(!sel) return;
+  if(viewingUser && !users.includes(viewingUser)) viewingUser = null;
+  const myselfLabel = currentUser ? `${currentUser} (myself)` : '(myself)';
+  sel.innerHTML = `<option value="">${escapeHtml(myselfLabel)}</option>`
+    + users.filter(u=>u!==currentUser).map(u=>`<option value="${escapeAttr(u)}">${escapeHtml(u)}</option>`).join('');
+  sel.value = viewingUser || '';
 }
 
 document.getElementById('userSelect').addEventListener('change', async (e)=>{
@@ -2129,6 +2195,7 @@ document.getElementById('userSelect').addEventListener('change', async (e)=>{
     }
     if(name){
       currentUser = name;
+      viewingUser = null; // switching identity drops any "viewing someone else" state
       await saveCurrentUser();
     }
     renderUserSelect();
@@ -2136,8 +2203,15 @@ document.getElementById('userSelect').addEventListener('change', async (e)=>{
     return;
   }
   currentUser = e.target.value;
+  viewingUser = null; // switching identity drops any "viewing someone else" state
+  renderViewingUserSelect(); // this branch doesn't call renderUserSelect(), which is otherwise what keeps the Viewing list's "(myself)" option pointed at the right user
   await saveCurrentUser();
   selectedIds.clear();
+  render();
+});
+
+document.getElementById('viewingUserSelect').addEventListener('change', (e)=>{
+  viewingUser = e.target.value || null;
   render();
 });
 
@@ -2178,6 +2252,7 @@ document.getElementById('deleteUserBtn').addEventListener('click', async ()=>{
   }else{
     currentUser = users[0];
   }
+  viewingUser = null; // identity changed (your own user was just deleted) — drop any viewing state
   await saveCurrentUser();
   renderUserSelect();
   render();
@@ -2372,10 +2447,16 @@ function render(){
     });
   }
 
+  // Deliberately tied to currentUser (real identity), not the viewed user —
+  // this drives the Postings column's own interactive rendering (dimming,
+  // "Already in your Hopper", hiding the pull button, and the Hide-my-
+  // claimed filter below), which is about what the real you can still
+  // pull, regardless of whose board you're currently looking at.
   const claimedSourceIds = new Set(
     liveCards().filter(c=> c.owner===currentUser && c.sourceId).map(c=>c.sourceId)
   );
 
+  const viewedUser = effectiveViewUser();
   function poolFor(col){
     if(col.shared){
       return visibleCards.filter(c=>{
@@ -2384,7 +2465,7 @@ function render(){
         return true;
       });
     }
-    return visibleCards.filter(c=>c.column===col.key && c.owner===currentUser);
+    return visibleCards.filter(c=>c.column===col.key && c.owner===viewedUser);
   }
 
   // Column counts as currently displayed (respects hideClaimedPostings for
@@ -2394,18 +2475,28 @@ function render(){
   COLUMNS.forEach(c=>{ columnCounts[c.key] = poolFor(c).length; });
 
   // Postings' OWN header fill is defined differently from every other
-  // column: "what percentage of all postings has this user claimed" —
-  // pulling a posting clones it into the user's own column rather than
+  // column: "what percentage of all postings has the VIEWED user claimed" —
+  // pulling a posting clones it into the claimer's own column rather than
   // moving it, so the shared Postings pool never shrinks when claimed; a
-  // card only counts as claimed via claimedSourceIds (it owns a clone with
-  // sourceId pointing at it). This must hold steady regardless of the
-  // Hide-my-claimed toggle — that toggle only controls what's *visible* in
-  // the column body, not how "claimed" Postings is meant to read — so it's
-  // computed from the raw postings pool, bypassing hideClaimedPostings
-  // (while still respecting search/tag filters, like everything else here).
+  // card only counts as claimed via a sourceId-owning clone. This must hold
+  // steady regardless of the Hide-my-claimed toggle — that toggle only
+  // controls what's *visible* in the column body, not how "claimed"
+  // Postings is meant to read — so it's computed from the raw postings
+  // pool, bypassing hideClaimedPostings (while still respecting search/tag
+  // filters, like everything else here).
+  //
+  // Uses a separate viewedClaimedSourceIds (keyed on effectiveViewUser, not
+  // currentUser) so this stat pivots along with the rest of the board when
+  // the Viewing dropdown points at someone else — unlike claimedSourceIds
+  // above, which stays on the real you so the Postings column itself still
+  // behaves correctly (you can always pull anything you personally haven't
+  // claimed, no matter whose board you're currently looking at).
+  const viewedClaimedSourceIds = new Set(
+    liveCards().filter(c=> c.owner===viewedUser && c.sourceId).map(c=>c.sourceId)
+  );
   const rawPostingsCards = visibleCards.filter(c=> c.column === 'postings');
   const rawPostingsCount = rawPostingsCards.length;
-  const claimedPostingsCount = rawPostingsCards.filter(c=> claimedSourceIds.has(c.id)).length;
+  const claimedPostingsCount = rawPostingsCards.filter(c=> viewedClaimedSourceIds.has(c.id)).length;
   const postingsClaimedPct = rawPostingsCount > 0 ? Math.min(100, claimedPostingsCount / rawPostingsCount * 100) : 0;
 
   // Every other column's header fill: its own share of everything this
@@ -2434,9 +2525,13 @@ function render(){
   }
 
   statsEl.innerHTML = COLUMNS.map(c=>{
+    if(c.key === 'postings'){
+      const n = Math.max(0, rawPostingsCount - claimedPostingsCount);
+      return `<span><b>${n}</b> unclaimed postings</span>`;
+    }
     const n = columnCounts[c.key];
     const label = c.key === 'hopper'
-      ? (currentUser ? `in ${currentUser}'s hopper` : 'in my hopper')
+      ? (viewedUser ? `in ${viewedUser}'s hopper` : 'in my hopper')
       : c.label.toLowerCase();
     return `<span><b>${n}</b> ${label}</span>`;
   }).join('');
@@ -2457,10 +2552,19 @@ function render(){
   // column lists and the wide Postings grid — `highlightEl` is whichever
   // container should get the 'drag-over' highlight while dragging over it.
   function buildCardEl(card, col, highlightEl){
+    // Personal (non-shared) columns are scoped to effectiveViewUser(), not
+    // currentUser — so when Viewing points at someone else, every card
+    // rendered here for those columns belongs to THEM, not you. Lock those
+    // down to read-only (no drag, no select, no click-to-edit) rather than
+    // letting the real you edit/move someone else's cards just because
+    // you're looking at their board. Postings is exempt (col.shared) —
+    // it's not any one person's board, and pulling from it is handled
+    // entirely separately, always against currentUser (see pullToHopper).
+    const readOnly = !col.shared && card.owner !== currentUser;
     const cardEl = document.createElement('div');
-    cardEl.className = 'card';
+    cardEl.className = 'card' + (readOnly ? ' read-only' : '');
     cardEl.dataset.col = col.key;
-    cardEl.draggable = true;
+    cardEl.draggable = !readOnly;
     cardEl.dataset.id = card.id;
     const tags = [];
     const reasonTag = (card.tags || []).find(t=>t.startsWith('REJECTED:') || t.startsWith('DISCARDED:'));
@@ -2476,7 +2580,7 @@ function render(){
       const ut = elideTagText(t);
       return `<span class="utag${isSrc ? ' src' : ''}"${ut.titleAttr}>${ut.display}</span>`;
     }).join('');
-    const selectable = col.key === 'hopper';
+    const selectable = col.key === 'hopper' && !readOnly;
     if(selectable) cardEl.classList.add('selectable');
     if(selectable && selectedIds.has(card.id)) cardEl.classList.add('selected');
     const isClaimed = col.shared && claimedSourceIds.has(card.id);
@@ -2524,6 +2628,7 @@ function render(){
     cardEl.addEventListener('click', (e)=>{
       if(e.target.closest('a')) return;
       if(e.target.closest('.select-mark')) return;
+      if(readOnly) return;
       openModal(card);
     });
 
@@ -2948,6 +3053,14 @@ async function moveCardTo(draggedId, targetColumnKey, targetId, before){
   if(!draggedCard) return;
 
   const draggedIsPosting = draggedCard.owner === null || draggedCard.owner === undefined;
+
+  // Defense in depth: the UI already makes another user's personal cards
+  // non-draggable (see buildCardEl's readOnly flag) while Viewing points at
+  // them, but block it here too in case a drag was already in flight when
+  // the view switched, or anything else slipped a foreign id through.
+  if(!draggedIsPosting && draggedCard.owner !== currentUser){
+    return;
+  }
 
   // Dropping a shared Postings card onto a personal column = pull (copy), same as the button.
   if(draggedIsPosting && targetCol && !targetCol.shared){
