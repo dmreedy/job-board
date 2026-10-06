@@ -1496,7 +1496,7 @@
       <section class="m-screen" id="mScreenNew">
         <div class="m-new-actions">
           <button class="m-big-btn m-big-btn-primary" id="mOpenPaste">
-            <span class="m-big-btn-icon">📋</span>
+            <span class="m-big-btn-icon">⧉</span>
             <span class="m-big-btn-label">Paste from Posting</span>
             <span class="m-big-btn-sub">Paste a link or the listing text — we'll parse the details</span>
           </button>
@@ -1534,7 +1534,7 @@
       <span class="m-tab-icon">⊞</span><span class="m-tab-label">Postings</span>
     </button>
     <button class="m-tab" id="mTabHopper" data-tab="hopper">
-      <span class="m-tab-icon">📥</span><span class="m-tab-label">Hopper</span>
+      <span class="m-tab-icon">⊡</span><span class="m-tab-label">Hopper</span>
     </button>
   </nav>
 </div>
@@ -1887,6 +1887,8 @@ let currentUser = null;
 // updatedAt rather than deleting the key outright — same tombstone
 // reasoning as cards' `deleted` flag: an outright delete would just get
 // silently resurrected by whichever device syncs next with the old entry.
+let backendMissingResumes = false; // set by remoteFetchAllOnce; see there
+const BACKEND_OUTDATED_MSG = "Your sync backend (the Google Apps Script) is an older version that doesn't store resume links, so they're only being saved on this device. Paste the latest apps-script-backend script into your Apps Script project and redeploy it (Manage deployments > Edit > New version), then Synchronize.";
 let userResumes = {};
 // Which user's personal columns (Hopper/Applied/.../Discarded) are
 // currently on screen — session-only, like columnWidths/searchQuery.
@@ -2102,7 +2104,18 @@ const SYNC_RETRY_DELAYS_MS = [600, 1500];
 async function remoteFetchAllOnce(){
   if(!syncUrl) return null;
   try{
-    const resp = await fetch(`${syncUrl}?key=${encodeURIComponent(syncSecret || '')}`);
+    // POST with the key in the JSON body, not a GET with ?key=... in the
+    // URL — a query-string secret ends up in the browser's own history,
+    // in Apps Script's execution log (which records the full request
+    // URL), and in any Referer header a stray navigation might send,
+    // none of which a POST body is subject to. Mirrors remotePushAllOnce
+    // below exactly (same no-custom-headers shape, for the same CORS-
+    // preflight-avoidance reason — see its comment) other than the
+    // action:'pull' flag telling the backend which side of doPost to run.
+    const resp = await fetch(syncUrl, {
+      method: 'POST',
+      body: JSON.stringify({ key: syncSecret || '', action: 'pull' })
+    });
     const bodyText = await resp.text();
     if(!resp.ok){
       lastSyncError = `HTTP ${resp.status} on fetch: ${bodyText.slice(0,300)}`;
@@ -2120,6 +2133,11 @@ async function remoteFetchAllOnce(){
       lastSyncError = 'Unexpected response shape on fetch (cards/users not arrays)';
       throw new Error(lastSyncError);
     }
+    // A backend deployed before resume support never includes a `resumes`
+    // field in its response (and silently drops the one we push) — which
+    // looks exactly like "links only save locally". Flag it so the UI can
+    // say so instead of failing silently.
+    backendMissingResumes = !data.resumes || typeof data.resumes !== 'object';
     lastSyncError = null;
     return data;
   }catch(e){
@@ -2147,7 +2165,7 @@ async function remotePushAllOnce(cardsArr, usersArr){
       // through as a parameter — every call site already has the current
       // value in scope at module level, same as how this function already
       // reads syncUrl/syncSecret directly instead of taking them as args.
-      body: JSON.stringify({ key: syncSecret || '', cards: cardsArr, users: usersArr, resumes: userResumes })
+      body: JSON.stringify({ key: syncSecret || '', action: 'push', cards: cardsArr, users: usersArr, resumes: userResumes })
     });
     const bodyText = await resp.text();
     if(!resp.ok){
@@ -2772,6 +2790,12 @@ async function saveResumes(){
     // to thread it through as a parameter here, same as cards/users.
     const ok = await remotePushAll(cards, users);
     setSyncIndicator(ok ? 'synced' : 'failed');
+    // Push responses don't reveal backend version, so confirm with a pull:
+    // an outdated backend shows up as a response with no `resumes` field.
+    if(ok){
+      await remoteFetchAll();
+      if(backendMissingResumes) await showAlertModal(BACKEND_OUTDATED_MSG);
+    }
   }
 }
 
@@ -4373,6 +4397,9 @@ async function synchronize(){
   const merged = mergeCardsAndUsers(remote.cards, remote.users, remote.resumes);
   cards = merged.cards;
   users = merged.users;
+  if(backendMissingResumes && Object.values(userResumes).some(r=> r && r.url)){
+    await showAlertModal(BACKEND_OUTDATED_MSG);
+  }
   if(!currentUser || !users.includes(currentUser)){
     currentUser = users[0] || null;
     await saveCurrentUser();
