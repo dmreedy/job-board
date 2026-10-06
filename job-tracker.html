@@ -2210,8 +2210,74 @@ let isSyncing = false;
 // out, or the next explicit setSyncIndicator call moves past it).
 let pillLocked = false;
 
+// Browser-tab sync indicator: swaps the favicon for a brass dot with an
+// expanding-ring pulse while a sync runs, and a solid red dot if it
+// failed; puts the normal favicon back otherwise. Frames are drawn on a
+// canvas and swapped in as PNG data URLs, since animated SVG favicons
+// aren't reliably animated by browsers. (Background tabs throttle timers
+// to ~1/sec, so the pulse looks choppier there — it still reads fine.)
+const tabIcon = (function(){
+  const link = document.querySelector('link[rel="icon"]');
+  if(!link) return { syncing(){}, failed(){}, off(){} };
+  const originalHref = link.getAttribute('href');
+  const originalType = link.getAttribute('type');
+  const PERIOD_MS = 1700; // same rhythm as the Synchronize button's pulse
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  let timer = null;
+
+  function base(){
+    ctx.clearRect(0, 0, 64, 64);
+    ctx.fillStyle = '#1b1e24';
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(0, 0, 64, 64, 10); else ctx.rect(0, 0, 64, 64);
+    ctx.fill();
+  }
+  function show(){
+    link.setAttribute('type', 'image/png');
+    link.setAttribute('href', canvas.toDataURL('image/png'));
+  }
+  function drawPulse(){
+    const p = (Date.now() % PERIOD_MS) / PERIOD_MS;
+    base();
+    // Ring expands and fades over the first 70% of the cycle, like the
+    // box-shadow pulse on the sync button; the core breathes slightly.
+    const ringP = Math.min(1, p / 0.7);
+    ctx.fillStyle = `rgba(201,163,93,${0.65 * (1 - ringP)})`;
+    ctx.beginPath(); ctx.arc(32, 32, 16 + 14 * ringP, 0, Math.PI * 2); ctx.fill();
+    const core = 14 * (0.85 + 0.15 * Math.sin(Math.PI * ringP));
+    ctx.fillStyle = '#c9a35d';
+    ctx.beginPath(); ctx.arc(32, 32, core, 0, Math.PI * 2); ctx.fill();
+    show();
+  }
+  function stop(){ if(timer){ clearInterval(timer); timer = null; } }
+  return {
+    syncing(){
+      if(timer) return;
+      drawPulse();
+      timer = setInterval(drawPulse, 90);
+    },
+    failed(){
+      stop();
+      base();
+      ctx.fillStyle = '#d4533b';
+      ctx.beginPath(); ctx.arc(32, 32, 17, 0, Math.PI * 2); ctx.fill();
+      show();
+    },
+    off(){
+      stop();
+      if(originalType) link.setAttribute('type', originalType); else link.removeAttribute('type');
+      link.setAttribute('href', originalHref);
+    }
+  };
+})();
+
 function setSyncIndicator(state){
   // state: 'synced' | 'failed' | 'off' | 'syncing' | 'pending'
+  if(state === 'syncing') tabIcon.syncing();
+  else if(state === 'failed') tabIcon.failed();
+  else tabIcon.off(); // 'off' | 'pending' | 'synced'
   const el = document.getElementById('syncState');
   if(!el) return;
   clearTimeout(setSyncIndicator._t);
