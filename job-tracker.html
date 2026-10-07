@@ -96,6 +96,9 @@
     color:var(--paper-dim);
   }
   .stats b{ color:var(--paper); font-weight:500; }
+  .stats .stat{ cursor:default; border-radius:3px; transition:background .12s, color .12s; }
+  /* Linked highlight: hovering a stat label or its bar segment lights up both. */
+  .stats .stat.hl{ background:rgba(201,162,92,0.18); box-shadow:0 0 0 3px rgba(201,162,92,0.18); color:var(--paper); }
   .stats-wrap{
     display:flex;
     flex-direction:column;
@@ -115,15 +118,41 @@
     display:flex;
     height:6px;
     border-radius:3px;
-    overflow:hidden;
+    /* overflow stays visible so a highlighted segment's brass stroke
+       isn't clipped; end segments round themselves instead (below). */
     background:var(--hairline);
     gap:2px;
   }
+  .stats-fill-bar .seg:first-child{ border-radius:3px 1px 1px 3px; }
+  .stats-fill-bar .seg:last-child{ border-radius:1px 3px 3px 1px; }
+  .stats-fill-bar .seg:only-child{ border-radius:3px; }
   /* Hover: the segment under the pointer brightens while its neighbors
      dim, so it's obvious which block the tooltip refers to. */
   .stats-fill-bar .seg{ transition:filter .12s, opacity .12s; }
-  #statsFillBar:hover .seg{ opacity:0.45; }
-  #statsFillBar:hover .seg:hover{ opacity:1; filter:brightness(1.3); }
+  #statsFillBar.has-hl .seg{ opacity:0.45; }
+  #statsFillBar .seg.hl{
+    opacity:1;
+    filter:brightness(1.3);
+    position:relative;
+    z-index:1;
+    box-shadow:0 0 0 2px var(--brass);
+  }
+  /* Instant tooltip (the native title attribute waits ~1s). */
+  .seg-tip{
+    position:fixed;
+    z-index:10000;
+    pointer-events:none;
+    display:none;
+    background:var(--panel-2);
+    color:var(--paper);
+    border:1px solid var(--brass);
+    border-radius:4px;
+    padding:4px 8px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    white-space:nowrap;
+    transform:translateX(-50%);
+  }
   .stats-fill-bar .seg{
     flex-shrink:0;
     flex-basis:0;
@@ -181,7 +210,29 @@
     0%, 100% { box-shadow: 0 0 0 0 rgba(201,163,93,0.55); }
     50% { box-shadow: 0 0 0 7px rgba(201,163,93,0); }
   }
-  .toprow{ display:flex; align-items:center; flex-wrap:wrap; gap:14px; }
+  .toprow{ display:flex; align-items:center; flex-wrap:wrap; gap:14px 24px; }
+  /* Deliberately bigger than the 12px stat labels beside it; centered on
+     the row's own vertical midline via .toprow's align-items:center. */
+  .processed{
+    display:flex;
+    align-items:baseline;
+    gap:12px;
+    flex-shrink:0;
+    white-space:nowrap;
+  }
+  .processed-label{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:16px;
+    color:var(--paper);
+  }
+  .processed-num{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:34px;
+    line-height:1;
+    color:var(--brass);
+  }
 
   .user-picker{
     display:flex;
@@ -1600,7 +1651,7 @@
 
 <div class="topbar">
   <div class="topbar-main">
-    <h1>Job Search</h1>
+    <h1>Job Search<span id="dayCount"></span></h1>
     <div class="user-picker" id="userPickerWrap" style="margin-left:20px;">
       <label>User</label>
       <select id="userSelect"></select>
@@ -1634,6 +1685,12 @@
   </div>
   <!-- Summary bar: now its own full-width row beneath the rest of the header. -->
   <div class="toprow">
+    <!-- Peer of the summary bar (not nested in it): claimed cards that have
+         moved past the hopper for whoever's board is on screen. -->
+    <div class="processed" id="processedBox" title="Cards you've claimed that have moved past the Hopper">
+      <span class="processed-label">Applications Processed</span>
+      <span class="processed-num" id="processedCount">0</span>
+    </div>
     <div class="stats-wrap">
       <div class="stats" id="stats"></div>
       <div class="stats-fill-bar" id="statsFillBar"></div>
@@ -1980,6 +2037,82 @@ let lastSyncAt = 0;
 // the oldest snapshot is dropped, so the last N changes are always undoable.
 const UNDO_MAX_STEPS = 5;
 let undoStack = [];
+
+// ---- Summary bar <-> stat label linked hover, instant tooltip, day counter ----
+// Which column's bar segment / stat label is currently highlighted (or null).
+// Driven by hovering either one; render() rebuilds both, so the state lives
+// here and syncSegHighlight() re-applies it.
+let hlCol = null;
+function syncSegHighlight(){
+  const bar = document.getElementById('statsFillBar');
+  if(bar){
+    bar.classList.toggle('has-hl', !!hlCol);
+    bar.querySelectorAll('.seg').forEach(el=> el.classList.toggle('hl', el.dataset.col === hlCol));
+  }
+  document.querySelectorAll('#stats .stat').forEach(el=> el.classList.toggle('hl', el.dataset.col === hlCol));
+}
+function showSegTip(seg){
+  let tip = document.getElementById('segTip');
+  if(!tip){
+    tip = document.createElement('div');
+    tip.id = 'segTip';
+    tip.className = 'seg-tip';
+    document.body.appendChild(tip);
+  }
+  tip.textContent = seg.dataset.tip || '';
+  const r = seg.getBoundingClientRect();
+  tip.style.left = (r.left + r.width / 2) + 'px';
+  tip.style.top = (r.bottom + 10) + 'px';
+  tip.style.display = 'block';
+}
+function hideSegTip(){
+  const tip = document.getElementById('segTip');
+  if(tip) tip.style.display = 'none';
+}
+(function wireSegHover(){
+  const bar = document.getElementById('statsFillBar');
+  const stats = document.getElementById('stats');
+  if(bar){
+    bar.addEventListener('mouseover', e=>{
+      const seg = e.target.closest('.seg');
+      if(!seg) return;
+      hlCol = seg.dataset.col;
+      syncSegHighlight();
+      showSegTip(seg);
+    });
+    bar.addEventListener('mouseleave', ()=>{ hlCol = null; syncSegHighlight(); hideSegTip(); });
+  }
+  if(stats){
+    stats.addEventListener('mouseover', e=>{
+      const st = e.target.closest('.stat');
+      if(!st) return;
+      hlCol = st.dataset.col;
+      syncSegHighlight();
+    });
+    stats.addEventListener('mouseleave', ()=>{ hlCol = null; syncSegHighlight(); });
+  }
+})();
+
+// "Job Search Day N": inclusive day count from the oldest card's date to
+// today (the oldest card's day is Day 1). Uses every non-deleted card on
+// the board, shared postings included. Cards without a valid date are
+// ignored; with none at all the title stays plain.
+function updateDayCount(){
+  const el = document.getElementById('dayCount');
+  if(!el) return;
+  let oldest = null;
+  liveCards().forEach(c=>{
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(c.date || '');
+    if(!m) return;
+    const t = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+    if(oldest === null || t < oldest) oldest = t;
+  });
+  if(oldest === null){ el.textContent = ''; return; }
+  const now = new Date();
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = Math.max(1, Math.round((today - oldest) / 86400000) + 1);
+  el.textContent = ` Day ${days}`;
+}
 
 function pushUndoSnapshot(){
   undoStack.push({
@@ -3495,14 +3628,15 @@ function render(){
   statsEl.innerHTML = COLUMNS.map(c=>{
     if(c.key === 'postings'){
       const n = Math.max(0, rawPostingsCount - claimedPostingsCount);
-      return `<span><b style="color:var(--postings-text)">${n}</b> unclaimed postings</span>`;
+      return `<span class="stat" data-col="postings"><b style="color:var(--postings-text)">${n}</b> unclaimed postings</span>`;
     }
     const n = columnCounts[c.key];
     const label = c.key === 'hopper'
       ? (viewedUser ? `in ${viewedUser}'s hopper` : 'in my hopper')
       : c.label.toLowerCase();
-    return `<span><b style="color:var(--${c.key}-text)">${n}</b> ${label}</span>`;
+    return `<span class="stat" data-col="${c.key}"><b style="color:var(--${c.key}-text)">${n}</b> ${label}</span>`;
   }).join('');
+  syncSegHighlight(); // the bar/labels were just rebuilt; drop any stale highlight state
 
   // One connected bar under the stats line — see barPct above for why its
   // segments use a different (sum-to-100%) breakdown than the per-column
@@ -3524,12 +3658,22 @@ function render(){
     // empty segments entirely means `gap` only ever appears between
     // segments that actually have size.
     .filter(seg => seg.pct > 0)
-    .map(seg => `<div class="seg" style="flex-grow:${seg.pct}; background:var(--${seg.key});" title="${escapeHtml(seg.segLabel)}: ${seg.pct.toFixed(1)}%"></div>`)
-    .join('');
+    ;
+  const segMarkup = (seg, native) => `<div class="seg" data-col="${seg.key}" data-tip="${escapeHtml(seg.segLabel)}: ${seg.pct.toFixed(1)}%" style="flex-grow:${seg.pct}; background:var(--${seg.key});"${native ? ` title="${escapeHtml(seg.segLabel)}: ${seg.pct.toFixed(1)}%"` : ''}></div>`;
   const statsFillBarEl = document.getElementById('statsFillBar');
-  if(statsFillBarEl) statsFillBarEl.innerHTML = statsSegHtml;
+  if(statsFillBarEl) statsFillBarEl.innerHTML = statsSegHtml.map(seg=> segMarkup(seg, false)).join('');
   const mSideBarEl = document.getElementById('mSideBar');
-  if(mSideBarEl) mSideBarEl.innerHTML = statsSegHtml;
+  if(mSideBarEl) mSideBarEl.innerHTML = statsSegHtml.map(seg=> segMarkup(seg, true)).join('');
+
+  // "Applications Processed": everything the viewed user has claimed or
+  // entered, minus what's still sitting in their Hopper. Counts all of
+  // their cards, not just the ones passing the current search/tag filter.
+  const mine = liveCards().filter(c=> c.owner === viewedUser && c.column !== 'postings');
+  const processedN = Math.max(0, mine.length - mine.filter(c=> c.column === 'hopper').length);
+  const processedEl = document.getElementById('processedCount');
+  if(processedEl) processedEl.textContent = String(processedN);
+
+  updateDayCount();
 
   // Builds one fully-wired card element. Reused by both the normal narrow
   // column lists and the wide Postings grid — `highlightEl` is whichever
