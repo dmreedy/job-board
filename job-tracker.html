@@ -2189,10 +2189,46 @@ function sleep(ms){ return new Promise(resolve=> setTimeout(resolve, ms)); }
 // and push retry a couple of times with a short delay before actually
 // giving up. lastSyncError always reflects the *last* attempt's failure,
 // so retries never hide real, persistent errors from the diagnostic view.
-const SYNC_RETRY_DELAYS_MS = [600, 1500];
+// Backoff schedule (ms, each with up to +-25% jitter). These errors are
+// usually gone within a couple of seconds, but a short burst of them
+// can last longer, so the schedule stretches out to ~13s in total.
+const SYNC_RETRY_DELAYS_MS = [500, 1500, 3500, 7000];
+const jittered = ms => Math.round(ms * (0.75 + Math.random() * 0.5));
+
+// Whether the most recent failed attempt is worth retrying. A rejected
+// key ({error:'unauthorized'}) or a 401/403 won't fix itself on retry;
+// 404s, 429s, 5xx and network errors usually do.
+let lastSyncErrorTransient = true;
+
+// Only one request to the backend is ever in flight. Every local edit
+// triggers its own push, so quick edits used to overlap — and Apps
+// Script handles concurrent requests poorly (extra cold starts, lock
+// contention, more of the spurious error pages). Calls queue up here
+// and run one after another instead.
+let syncQueueTail = Promise.resolve();
+function serializeSync(fn){
+  const run = syncQueueTail.then(fn, fn);
+  syncQueueTail = run.catch(()=>{});
+  return run;
+}
+
+// Google's error pages are whole HTML documents; dumping 300 characters
+// of one into the status tooltip is just noise. Summarize it, and keep
+// the raw text in the console for real debugging.
+function describeBadResponse(status, bodyText, what){
+  const looksHtml = /^\s*<(!doctype|html)/i.test(bodyText);
+  console.warn(`sync ${what}: HTTP ${status} response body:`, bodyText.slice(0, 2000));
+  if(looksHtml){
+    return `HTTP ${status} on ${what}: Google returned an HTML error page instead of the script's JSON` +
+      (status === 404 ? ' (usually a transient Apps Script hiccup; if it persists, check the deployment URL/access)' : '');
+  }
+  return `HTTP ${status} on ${what}: ${bodyText.slice(0,300)}`;
+}
 
 async function remoteFetchAllOnce(){
   if(!syncUrl) return null;
+  lastSyncErrorTransient = true;
+  lastSyncError = null;
   try{
     // POST with the key in the JSON body, not a GET with ?key=... in the
     // URL — a query-string secret ends up in the browser's own history,
@@ -2208,7 +2244,8 @@ async function remoteFetchAllOnce(){
     });
     const bodyText = await resp.text();
     if(!resp.ok){
-      lastSyncError = `HTTP ${resp.status} on fetch: ${bodyText.slice(0,300)}`;
+      lastSyncError = describeBadResponse(resp.status, bodyText, 'fetch');
+      if(resp.status === 401 || resp.status === 403) lastSyncErrorTransient = false;
       throw new Error(lastSyncError);
     }
     let data;
@@ -2218,7 +2255,7 @@ async function remoteFetchAllOnce(){
       lastSyncError = `Non-JSON response on fetch (HTTP ${resp.status}): ${bodyText.slice(0,300)}`;
       throw new Error(lastSyncError);
     }
-    if(data.error){ lastSyncError = `Server error on fetch: ${data.error}`; throw new Error(lastSyncError); }
+    if(data.error){ lastSyncError = `Server error on fetch: ${data.error}`; lastSyncErrorTransient = false; throw new Error(lastSyncError); }
     if(!Array.isArray(data.cards) || !Array.isArray(data.users)){
       lastSyncError = 'Unexpected response shape on fetch (cards/users not arrays)';
       throw new Error(lastSyncError);
@@ -2237,17 +2274,21 @@ async function remoteFetchAllOnce(){
   }
 }
 
-async function remoteFetchAll(){
-  let result = await remoteFetchAllOnce();
-  for(let i=0; result===null && i<SYNC_RETRY_DELAYS_MS.length; i++){
-    await sleep(SYNC_RETRY_DELAYS_MS[i]);
-    result = await remoteFetchAllOnce();
-  }
-  return result;
+function remoteFetchAll(){
+  return serializeSync(async ()=>{
+    let result = await remoteFetchAllOnce();
+    for(let i=0; result===null && lastSyncErrorTransient && i<SYNC_RETRY_DELAYS_MS.length; i++){
+      await sleep(jittered(SYNC_RETRY_DELAYS_MS[i]));
+      result = await remoteFetchAllOnce();
+    }
+    return result;
+  });
 }
 
 async function remotePushAllOnce(cardsArr, usersArr){
   if(!syncUrl) return true; // no-op success when sync isn't configured
+  lastSyncErrorTransient = true;
+  lastSyncError = null;
   try{
     const resp = await fetch(syncUrl, {
       method: 'POST',
@@ -2259,7 +2300,8 @@ async function remotePushAllOnce(cardsArr, usersArr){
     });
     const bodyText = await resp.text();
     if(!resp.ok){
-      lastSyncError = `HTTP ${resp.status} on push: ${bodyText.slice(0,300)}`;
+      lastSyncError = describeBadResponse(resp.status, bodyText, 'push');
+      if(resp.status === 401 || resp.status === 403) lastSyncErrorTransient = false;
       throw new Error(lastSyncError);
     }
     let data;
@@ -2269,7 +2311,7 @@ async function remotePushAllOnce(cardsArr, usersArr){
       lastSyncError = `Non-JSON response on push (HTTP ${resp.status}): ${bodyText.slice(0,300)}`;
       throw new Error(lastSyncError);
     }
-    if(data.error){ lastSyncError = `Server error on push: ${data.error}`; throw new Error(lastSyncError); }
+    if(data.error){ lastSyncError = `Server error on push: ${data.error}`; lastSyncErrorTransient = false; throw new Error(lastSyncError); }
     lastSyncError = null;
     return true;
   }catch(e){
@@ -2279,13 +2321,15 @@ async function remotePushAllOnce(cardsArr, usersArr){
   }
 }
 
-async function remotePushAll(cardsArr, usersArr){
-  let ok = await remotePushAllOnce(cardsArr, usersArr);
-  for(let i=0; !ok && i<SYNC_RETRY_DELAYS_MS.length; i++){
-    await sleep(SYNC_RETRY_DELAYS_MS[i]);
-    ok = await remotePushAllOnce(cardsArr, usersArr);
-  }
-  return ok;
+function remotePushAll(cardsArr, usersArr){
+  return serializeSync(async ()=>{
+    let ok = await remotePushAllOnce(cardsArr, usersArr);
+    for(let i=0; !ok && lastSyncErrorTransient && i<SYNC_RETRY_DELAYS_MS.length; i++){
+      await sleep(jittered(SYNC_RETRY_DELAYS_MS[i]));
+      ok = await remotePushAllOnce(cardsArr, usersArr);
+    }
+    return ok;
+  });
 }
 
 // Whether a sync is actively in flight right now (drives the pulsing
