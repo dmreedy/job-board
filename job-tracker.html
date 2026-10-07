@@ -452,6 +452,20 @@
     margin-right:4px;
     flex-shrink:0;
   }
+  .controlbar .tag-filter-input{
+    flex:0 0 130px;
+    width:130px;
+    min-width:0;
+    max-width:none;
+    background:var(--panel-2);
+    border:1px solid var(--hairline);
+    border-radius:999px;
+    color:var(--paper);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    padding:5px 12px;
+  }
+  .controlbar .tag-filter-input:focus{ outline:none; border-color:var(--brass-dim); }
   .ftag{
     font-family:'IBM Plex Mono',monospace;
     font-size:11px;
@@ -2041,9 +2055,19 @@ function allTags(){
   return Array.from(set).sort((a,b)=>a.localeCompare(b));
 }
 
+// Text typed into the tag filter's own search field. Narrows which tag
+// chips are listed; it is not itself a card filter. Selected tags always
+// stay listed so an active filter can never be hidden by the field.
+let tagFilterQuery = '';
+
 function renderFilterbar(){
   const bar = document.getElementById('filterbar');
   const tags = allTags();
+  // render() rebuilds this bar from scratch, so remember whether the field
+  // had focus (and where the caret was) to put it back after the rebuild.
+  const prevInput = document.getElementById('tagFilterInput');
+  const hadFocus = !!prevInput && document.activeElement === prevInput;
+  const caret = hadFocus ? prevInput.selectionStart : 0;
   if(tags.length === 0){
     bar.style.display = 'none';
     bar.innerHTML = '';
@@ -2051,14 +2075,27 @@ function renderFilterbar(){
   }
   bar.style.display = 'flex';
   bar.innerHTML = `<span class="flabel">Filter by tag</span>` +
+    `<input type="text" id="tagFilterInput" class="tag-filter-input" placeholder="Find tag…" autocomplete="off" spellcheck="false" />` +
     (activeTagFilters.length ? `<button class="ftag clear" id="clearFilters">Clear</button>` : '') +
     `<div class="filterbar-scroll" id="filterbarScroll"></div>`;
 
   const scroll = document.getElementById('filterbarScroll');
-  scroll.innerHTML = tags.map(t=>{
+  const tagInput = document.getElementById('tagFilterInput');
+  tagInput.value = tagFilterQuery;
+  const q = tagFilterQuery.trim().toLowerCase();
+  const shown = q ? tags.filter(t => activeTagFilters.includes(t) || t.toLowerCase().includes(q)) : tags;
+  scroll.innerHTML = shown.length ? shown.map(t=>{
     const ft = elideTagText(t);
     return `<button class="ftag${activeTagFilters.includes(t)?' active':''}" data-tag="${escapeAttr(t)}"${ft.titleAttr}>${ft.display}</button>`;
-  }).join('');
+  }).join('') : `<span class="flabel">No matching tags</span>`;
+  tagInput.addEventListener('input', ()=>{
+    tagFilterQuery = tagInput.value;
+    renderFilterbar();
+  });
+  if(hadFocus){
+    tagInput.focus();
+    try{ tagInput.setSelectionRange(caret, caret); }catch(e){}
+  }
 
   scroll.querySelectorAll('.ftag[data-tag]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -4195,6 +4232,7 @@ document.getElementById('decayToggleCb').addEventListener('change', (e)=>{
 document.getElementById('resetColumnWidthsWrap').addEventListener('click', ()=>{
   columnWidths = {};
   activeTagFilters = [];
+  tagFilterQuery = '';
   clearTimeout(searchDebounce);
   searchQuery = '';
   document.getElementById('searchInput').value = '';
