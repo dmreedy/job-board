@@ -69,7 +69,7 @@
      buttons). Lines may only break BETWEEN groups, and a group's leading
      brass stroke disappears when it lands at the start of a line:
      .topbar-main clips; .topbar-groups is shifted left by exactly one
-     group lead-in (29px = 14px gap + 1px stroke + 14px gap), so on a
+     group lead-in (37px = 18px gap + 1px stroke + 18px gap), so on a
      wrapped line that lead-in — stroke included — sits outside the clip.
      The 8px padding/-8px margin pair gives the Sync button's pulse glow
      room to draw inside the clip box without changing the layout. */
@@ -83,7 +83,7 @@
     flex-wrap:wrap;
     align-items:center;
     row-gap:10px;
-    margin-left:-29px;
+    margin-left:-37px;
   }
   .hdr-chunk{
     position:relative;
@@ -91,12 +91,12 @@
     align-items:center;
     flex-shrink:0;
     white-space:nowrap;
-    padding-left:29px;
+    padding-left:37px;
   }
   .hdr-chunk::before{
     content:'';
     position:absolute;
-    left:14px;
+    left:18px;
     top:50%;
     width:1px;
     height:24px;
@@ -106,7 +106,7 @@
   }
   /* Scoped to the desktop header so it stops applying by itself when the
      gear is relocated into the mobile header. */
-  .topbar-main #settingsBtn{ margin-left:12px; }
+  .topbar-main #settingsBtn{ margin-left:16px; }
   .topbar h1{
     font-family:'Fraunces',serif;
     font-weight:500;
@@ -280,7 +280,7 @@
     display:inline-flex;
     align-items:baseline;
     gap:6px;
-    margin-left:16px;
+    margin-left:20px;
     white-space:nowrap;
     font-family:'Inter',sans-serif;
     font-weight:700;
@@ -292,7 +292,7 @@
   /* Header-row typography: bold "User:" / "Viewing:" labels as written,
      no left rule (brass strokes separate the groups instead). */
   .topbar-main .user-picker{ padding-left:0; border-left:none; }
-  .topbar-main .viewing-picker{ margin-left:16px; }
+  .topbar-main .viewing-picker{ margin-left:20px; }
   .topbar-main .user-picker label{
     font-family:'Inter',sans-serif;
     font-weight:700;
@@ -300,13 +300,13 @@
     text-transform:none;
     letter-spacing:0;
   }
-  .topbar-main .resume-wrap{ margin-left:0; margin-right:16px; }
+  .topbar-main .resume-wrap{ margin-left:0; margin-right:20px; }
   .topbar-main #exportBtn, .topbar-main #importBtn, .topbar-main #resumeBtn{ font-weight:700; }
   /* .add-btn's default 20px left margin was pushing this button away from the stroke before it. */
   .topbar-main #resumeBtn{ margin-left:0; }
-  /* The two button pairs sit 16px apart with no stroke between them; the
+  /* The two button pairs sit 20px apart with no stroke between them; the
      stroke before the first pair separates them from the readouts. */
-  .topbar-main .hdr-group{ margin-left:16px; }
+  .topbar-main .hdr-group{ margin-left:20px; }
   /* Dark-brass seam between the two halves of each solid-brass pill pair
      (+ From Posting | + Manual Entry, Export | Import). */
   .topbar-main .pair-right{ position:relative; }
@@ -1783,7 +1783,7 @@
         <button class="add-btn pair-right" id="importBtn" style="border-radius:0 999px 999px 0; margin-left:0;">Import</button>
       </div>
       <input type="file" id="importFile" accept="application/json" style="display:none;" />
-      <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; margin-left:12px;">Sync</button>
+      <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; margin-left:16px;">Sync</button>
       <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:15px; display:flex; align-items:center;">⚙</button>
     </div>
   </div></div>
