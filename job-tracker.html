@@ -76,7 +76,7 @@
   .topbar-main{
     overflow:hidden;
     padding:8px;
-    margin:-8px -8px -2px;
+    margin:-8px;
   }
   .topbar-groups{
     display:flex;
@@ -106,7 +106,7 @@
   }
   /* Scoped to the desktop header so it stops applying by itself when the
      gear is relocated into the mobile header. */
-  .topbar-main #settingsBtn{ margin-left:16px; }
+  .ctl-actions #settingsBtn{ margin-left:16px; }
   .topbar h1{
     font-family:'Fraunces',serif;
     font-weight:500;
@@ -273,7 +273,33 @@
     0%, 100% { box-shadow: 0 0 0 0 rgba(201,163,93,0.55); }
     50% { box-shadow: 0 0 0 7px rgba(201,163,93,0); }
   }
-  .toprow{ display:flex; align-items:center; flex-wrap:wrap; gap:14px 24px; }
+  /* The summary bar is the third group of the single header row. It takes
+     whatever width is left and its text scales with the viewport. */
+  .hdr-chunk.hdr-summary{ flex:1 1 340px; min-width:0; flex-shrink:1; }
+  .hdr-summary .stats-wrap{ flex:1; min-width:0; }
+  .hdr-summary .stats{
+    font-size:clamp(8px, 0.66vw, 12px);
+    gap:3px clamp(6px, 0.9vw, 22px);
+  }
+  #saveState:empty{ display:none; }
+  #saveState{ margin-left:10px; }
+  /* Controlbar pieces: view toggle with its filters under it, and the
+     post-creation / export-import / sync group. */
+  /* Left block: the button row with Reset Filters / Card aging beneath it.
+     The tag filter sits beside it, top-aligned, and can grow downward
+     without pushing those controls anywhere. */
+  .ctl-left{ display:flex; flex-direction:column; gap:8px; flex:0 1 auto; min-width:0; }
+  /* One shared line height for the button row and the tag filter's head, so
+     their centers coincide exactly (the tags' first row is centered on it
+     too: 22px tags, padded down by half the difference). */
+  .controlbar{ --ctl-h:36px; }
+  .ctl-row{ display:flex; align-items:center; flex-wrap:nowrap; gap:10px; height:var(--ctl-h); }
+  /* Search scales with the window so the tag filter can stay beside the
+     buttons on mid-size screens instead of dropping to its own line. */
+  .ctl-row #searchInput{ flex:0 0 auto; width:clamp(120px, 40vw - 420px, 340px); }
+  .ctl-subrow{ display:flex; align-items:center; gap:14px; padding-left:16px; }
+  .ctl-subrow .reset-widths-wrap{ margin-left:0; }
+  .ctl-actions{ display:flex; align-items:center; flex-shrink:0; }
   /* Header readouts ("Days: 13", "Submissions: 4"): bold label
      followed by a brass bold value, inline with the rest of the header row. */
   .hdr-stat{
@@ -301,16 +327,16 @@
     letter-spacing:0;
   }
   .topbar-main .resume-wrap{ margin-left:0; margin-right:20px; }
-  .topbar-main #exportBtn, .topbar-main #importBtn, .topbar-main #resumeBtn{ font-weight:700; }
+  .topbar-main #resumeBtn, .ctl-actions #exportBtn, .ctl-actions #importBtn{ font-weight:700; }
   /* .add-btn's default 20px left margin was pushing this button away from the stroke before it. */
   .topbar-main #resumeBtn{ margin-left:0; }
   /* The two button pairs sit 20px apart with no stroke between them; the
      stroke before the first pair separates them from the readouts. */
-  .topbar-main .hdr-group{ margin-left:20px; }
+  .ctl-actions .hdr-group{ margin-left:20px; }
   /* Dark-brass seam between the two halves of each solid-brass pill pair
      (+ From Posting | + Manual Entry, Export | Import). */
-  .topbar-main .pair-right{ position:relative; }
-  .topbar-main .pair-right::before{
+  .ctl-actions .pair-right{ position:relative; }
+  .ctl-actions .pair-right::before{
     content:'';
     position:absolute;
     left:0;
@@ -320,7 +346,7 @@
     background:color-mix(in srgb, var(--brass) 45%, #1b1e24);
   }
   /* Bold header buttons, all in normal case. */
-  .topbar-main .entry-btn, .topbar-main #syncBtn{ font-weight:700; }
+  .ctl-actions .entry-btn, .ctl-actions #syncBtn{ font-weight:700; }
 
   .user-picker{
     display:flex;
@@ -357,7 +383,9 @@
   .controlbar{
     display:flex;
     align-items:center;
-    gap:10px;
+    flex-wrap:wrap;
+    align-items:flex-start;
+    gap:8px 0;
     padding:10px 32px 0;
   }
   .filter-sep{
@@ -526,45 +554,52 @@
   }
   .pull-btn.disabled:hover{ border-color:var(--hairline); color:var(--paper-dim); }
 
+  /* Tag filter, right of the control bar's left block. Its box stretches to
+     exactly the left block's height (button row + Reset/aging row) — the
+     inner element is absolutely positioned so a long tag list never makes
+     the bar taller; it scrolls vertically instead. The label / Find field
+     / Clear head is centered on the button row's line, and the tag array
+     beside it starts with its first row on that same line, then descends. */
   .filterbar{
+    position:relative;
+    align-self:stretch;
+    flex:1 1 260px;
+    min-width:0;
+    min-height:64px; /* when wrapped below the buttons on narrow windows */
+  }
+  .fb-inner{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:flex-start;
+    gap:7px;
+    overflow-x:hidden;
+    overflow-y:auto;
+    padding-right:6px;
+    scrollbar-width:thin;
+    scrollbar-color:var(--brass-dim) transparent;
+  }
+  .fb-head{
     display:flex;
     align-items:center;
     gap:7px;
-    padding:0;
-    flex:1;
-    min-width:0;
+    height:var(--ctl-h);
+    flex-shrink:0;
   }
   .filterbar-scroll{
     display:flex;
-    flex-wrap:nowrap;
-    overflow-x:auto;
-    align-items:center;
+    flex-wrap:wrap;
+    align-content:flex-start;
     gap:7px;
+    flex:1 1 0;
     min-width:0;
-    /* Symmetric padding keeps the tags vertically centered with the other
-       control-bar items (bottom padding alone pushed them ~4px high). */
-    padding:8px 0;
-    scrollbar-width:thin;
-    scrollbar-color:var(--brass) transparent;
+    padding-top:calc((var(--ctl-h) - 22px) / 2);
   }
-  /* A thin hairline track with a small round brass thumb sitting on it —
-     "a dot moving along a line" — replacing the default browser scrollbar.
-     Firefox gets the plain thin/brass treatment above; this pseudo-element
-     styling covers Chrome/Edge/Safari, which support far more customization. */
-  .filterbar-scroll::-webkit-scrollbar{
-    height:12px;
-  }
-  .filterbar-scroll::-webkit-scrollbar-track{
-    background: linear-gradient(to bottom, transparent 45%, var(--hairline) 45%, var(--hairline) 55%, transparent 55%);
-  }
-  .filterbar-scroll::-webkit-scrollbar-thumb{
-    background:var(--brass);
-    border-radius:50%;
-    border:3px solid var(--bg);
-  }
-  .filterbar-scroll::-webkit-scrollbar-thumb:hover{
-    background:#dab472;
-  }
+  .filterbar-scroll .ftag{ height:22px; line-height:16px; box-sizing:border-box; }
+  .fb-inner::-webkit-scrollbar{ width:8px; }
+  .fb-inner::-webkit-scrollbar-track{ background:transparent; }
+  .fb-inner::-webkit-scrollbar-thumb{ background:var(--brass-dim); border-radius:4px; }
+  .fb-inner::-webkit-scrollbar-thumb:hover{ background:var(--brass); }
   .filterbar .flabel{
     font-family:'IBM Plex Mono',monospace;
     font-size:11px;
@@ -1269,6 +1304,7 @@
   }
 
   @media (max-width: 1024px){
+    .controlbar{ --ctl-h:44px; }
     /* Covers iPad portrait/landscape. iOS Safari auto-zooms the whole page
        when a focused input's font-size is under 16px — bump these up so
        tapping a field doesn't yank the viewport around. */
@@ -1773,8 +1809,28 @@
       <span class="hdr-stat" id="submittedBox" title="Cards in Applied, Interviewing, Offer, Rejected and Ghosted"><span>Submissions:</span><span class="hdr-num" id="submittedCount">0</span></span>
       <span class="hdr-stat" id="rejectionsBox" title="Cards in Rejected and Ghosted"><span>Rejections:</span><span class="hdr-num" id="rejectionsCount">0</span></span>
     </div>
-    <div class="hdr-chunk">
-      <div style="display:flex; gap:0;">
+    <div class="hdr-chunk hdr-summary">
+      <div class="stats-wrap">
+        <div class="stats" id="stats"></div>
+        <div class="stats-fill-bar" id="statsFillBar"></div>
+      </div>
+      <span id="saveState" style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim); text-align:right;"></span>
+    </div>
+  </div></div>
+</div>
+
+<div class="controlbar">
+  <div class="ctl-left">
+  <div class="ctl-row">
+  <div style="display:flex; gap:0; flex-shrink:0;">
+    <button class="add-btn view-btn active" id="viewBoardBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px 0 0 999px;">☰ Board</button>
+    <button class="add-btn view-btn" id="viewPostingsBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:0 999px 999px 0;">⊞ Postings Grid</button>
+  </div>
+  <input type="text" id="searchInput" placeholder="Search role, company, location, notes…" />
+  <button class="add-btn" id="undoBtn" disabled title="Nothing to undo" style="border-radius:999px; margin-left:0; flex-shrink:0;">↶ Undo<span class="undo-count" id="undoCount">0</span></button>
+  <div class="filter-sep"></div>
+  <div class="ctl-actions">
+<div style="display:flex; gap:0;">
         <button class="add-btn entry-btn" id="openPaste">+ From Posting</button>
         <button class="add-btn entry-btn pair-right" id="openAdd">+ Manual Entry</button>
       </div>
@@ -1785,34 +1841,19 @@
       <input type="file" id="importFile" accept="application/json" style="display:none;" />
       <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; margin-left:16px;">Sync</button>
       <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:15px; display:flex; align-items:center;">⚙</button>
-    </div>
-  </div></div>
-  <!-- Summary bar: now its own full-width row beneath the rest of the header. -->
-  <div class="toprow">
-    <div class="stats-wrap">
-      <div class="stats" id="stats"></div>
-      <div class="stats-fill-bar" id="statsFillBar"></div>
-    </div>
-    <span id="saveState" style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim); min-width:70px; text-align:right;"></span>
   </div>
-</div>
-
-<div class="controlbar">
-  <div style="display:flex; gap:0; flex-shrink:0;">
-    <button class="add-btn view-btn active" id="viewBoardBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px 0 0 999px;">☰ Board</button>
-    <button class="add-btn view-btn" id="viewPostingsBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:0 999px 999px 0;">⊞ Postings Grid</button>
   </div>
-  <input type="text" id="searchInput" placeholder="Search role, company, location, notes…" />
-  <button class="add-btn" id="undoBtn" disabled title="Nothing to undo" style="border-radius:999px; margin-left:0; flex-shrink:0;">↶ Undo<span class="undo-count" id="undoCount">0</span></button>
+    <div class="ctl-subrow">
   <div class="reset-widths-wrap" id="resetColumnWidthsWrap" title="Reset column widths, and clear the search and any selected tag filters">
     <button id="resetColumnWidthsBtn" class="reset-widths-btn"></button>
     <span class="reset-widths-label">Reset Filters</span>
   </div>
-  <label class="claimed-toggle-label" style="margin-left:6px; flex-shrink:0;">
+  <label class="claimed-toggle-label" style="flex-shrink:0;">
     <input type="checkbox" class="claimed-toggle-cb" id="decayToggleCb" checked />
     <span>Card aging</span>
   </label>
-  <div class="filter-sep"></div>
+    </div>
+  </div>
   <div class="filterbar" id="filterbar" style="display:none;"></div>
 </div>
 <div class="bulkbar" id="bulkbar" style="display:none;"></div>
@@ -2309,10 +2350,10 @@ function renderFilterbar(){
     return;
   }
   bar.style.display = 'flex';
-  bar.innerHTML = `<span class="flabel">Filter by tag</span>` +
+  bar.innerHTML = `<div class="fb-inner"><div class="fb-head"><div class="filter-sep"></div><span class="flabel">Filter by tag</span>` +
     `<input type="text" id="tagFilterInput" class="tag-filter-input" placeholder="Find tag…" autocomplete="off" spellcheck="false" />` +
     (activeTagFilters.length ? `<button class="ftag clear" id="clearFilters">Clear</button>` : '') +
-    `<div class="filterbar-scroll" id="filterbarScroll"></div>`;
+    `</div><div class="filterbar-scroll" id="filterbarScroll"></div></div>`;
 
   const scroll = document.getElementById('filterbarScroll');
   const tagInput = document.getElementById('tagFilterInput');
@@ -3879,7 +3920,7 @@ function render(){
   statsEl.innerHTML = COLUMNS.map(c=>{
     if(c.key === 'postings'){
       const n = Math.max(0, rawPostingsCount - claimedPostingsCount);
-      return `<span class="stat" data-col="postings"><b style="color:var(--postings-text)">${n}</b> unclaimed postings</span>`;
+      return `<span class="stat" data-col="postings"><b style="color:var(--postings-text)">${n}</b> unclaimed</span>`;
     }
     const n = columnCounts[c.key];
     const label = c.key === 'hopper'
