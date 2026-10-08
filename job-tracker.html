@@ -1766,9 +1766,9 @@
         <button class="add-btn" id="exportBtn" style="border-radius:999px 0 0 999px; margin-left:0;">Export</button>
         <button class="add-btn pair-right" id="importBtn" style="border-radius:0 999px 999px 0; margin-left:0;">Import</button>
       </div>
-      <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:15px; display:flex; align-items:center;">⚙</button>
       <input type="file" id="importFile" accept="application/json" style="display:none;" />
-      <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; margin-left:16px;">Sync</button>
+      <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; margin-left:12px;">Sync</button>
+      <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:15px; display:flex; align-items:center;">⚙</button>
     </div>
   </div></div>
   <!-- Summary bar: now its own full-width row beneath the rest of the header. -->
@@ -5157,7 +5157,6 @@ document.getElementById('syncBtn').addEventListener('click', synchronize);
   const userPickerHome = userPicker ? userPicker.parentElement : null;
   const userPickerAnchor = userPicker ? userPicker.nextSibling : null;
   const settingsBtnHome = settingsBtn ? settingsBtn.parentElement : null;
-  const settingsBtnAnchor = settingsBtn ? settingsBtn.nextSibling : null; // the hidden importFile input
   const syncHome = syncBtn ? syncBtn.parentElement : null; 
 
   function apply(isMobile){
@@ -5169,12 +5168,11 @@ document.getElementById('syncBtn').addEventListener('click', synchronize);
       if(isMobile) mHeaderSync.appendChild(syncBtn);
       else syncHome.appendChild(syncBtn);
     }
-    // The gear sits right after Export | Import, ahead of the sync controls,
-    // so it's restored with insertBefore against its captured original
-    // neighbor rather than appended.
+    // The gear is the last item in the desktop group, right after Sync, so
+    // on desktop it is simply re-appended after the Sync button above.
     if(settingsBtn && mHeaderActions){
       if(isMobile) mHeaderActions.appendChild(settingsBtn);
-      else settingsBtnHome.insertBefore(settingsBtn, settingsBtnAnchor);
+      else settingsBtnHome.appendChild(settingsBtn);
     }
   }
 
