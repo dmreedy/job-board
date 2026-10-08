@@ -1159,6 +1159,29 @@
   }
   .btn.primary:hover{ background:#dab472; }
   .btn.danger{ color:#e0a292; }
+  /* Sync settings dialog: pill buttons in the same style as the header
+     (brass primary like the entry buttons, panel-colored secondary like
+     Synchronize Now). Scoped here so the other dialogs are untouched. */
+  #settingsOverlay .btn{
+    border-radius:999px;
+    padding:9px 12px;
+    font-size:12.5px;
+    font-weight:600;
+    white-space:nowrap;
+    transition:background .12s, border-color .12s, color .12s;
+  }
+  #settingsOverlay .modal-actions{ gap:6px; }
+  #settingsOverlay .modal-actions .btn{ margin-left:0 !important; } /* spacing comes from gap */
+  #settingsOverlay .btn:hover{ border-color:var(--brass-dim); }
+  #settingsOverlay .btn.primary:hover{ background:#dab472; border-color:#dab472; }
+  #settingsOverlay .btn.danger{
+    background:transparent;
+    border-color:rgba(224,162,146,0.45);
+  }
+  #settingsOverlay .btn.danger:hover{
+    background:rgba(224,162,146,0.12);
+    border-color:#e0a292;
+  }
 
   @media (max-width: 1024px){
     /* Covers iPad portrait/landscape. iOS Safari auto-zooms the whole page
@@ -2296,6 +2319,76 @@ const store = {
 
 function uid(){ return 'c' + Math.random().toString(36).slice(2,10); }
 
+// Local-calendar YYYY-MM-DD. (toISOString() is UTC, so in the evening in
+// the Americas it already says "tomorrow".)
+function localISODate(d = new Date()){
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// ---- Duplicate detection ----
+// A posting's identity is its job title and company hashed together:
+// both are lowercased and stripped to letters/digits first, so casing,
+// punctuation and spacing differences ("Sr. Engineer" / "sr engineer",
+// "Acme, Inc." / "Acme Inc") still collide. 32-bit FNV-1a gives the hash;
+// matches also compare the normalized key itself, so a hash collision
+// between two different postings can never raise a false warning.
+function normalizeForHash(str){
+  return String(str || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+function postingKey(role, company){
+  return normalizeForHash(role) + '|' + normalizeForHash(company);
+}
+function postingHash(role, company){
+  const key = postingKey(role, company);
+  let h = 0x811c9dc5;
+  for(let i = 0; i < key.length; i++){
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
+// Every live card, in any column and on any user's board, whose title +
+// company hash matches. Needs both a title and a company to compare;
+// with only one of them there's too little to call anything a duplicate.
+function findDuplicateCards(role, company, excludeId){
+  if(!normalizeForHash(role) || !normalizeForHash(company)) return [];
+  const hash = postingHash(role, company);
+  const key = postingKey(role, company);
+  return liveCards().filter(c=>
+    c.id !== excludeId &&
+    postingHash(c.role, c.company) === hash &&
+    postingKey(c.role, c.company) === key
+  );
+}
+
+// Whole days between a card's date (falling back to when it was last
+// touched for cards that have none) and today, in local time.
+function cardAgeDays(card){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(card.date || '');
+  const start = m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : (() => {
+    const d = new Date(card.updatedAt || Date.now());
+    return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  })();
+  const now = new Date();
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.max(0, Math.round((today - start) / 86400000));
+}
+
+function duplicateWarningText(matches){
+  // Lead with the newest match — the most recent sighting of this posting.
+  const sorted = matches.slice().sort((a,b)=> cardAgeDays(a) - cardAgeDays(b));
+  const m = sorted[0];
+  const days = cardAgeDays(m);
+  const age = days === 0 ? 'added today' : `${days} day${days === 1 ? '' : 's'} old`;
+  const colDef = COLUMNS.find(c=> c.key === m.column);
+  const colName = !colDef ? m.column : m.column === 'hopper' ? hopperLabel() : m.column === 'discarded' ? discardedLabel() : colDef.label;
+  const where = m.owner ? `${colName} (${m.owner})` : colName;
+  const extra = matches.length > 1 ? `\n\n${matches.length - 1} other matching card${matches.length - 1 === 1 ? '' : 's'} also found.` : '';
+  return `This posting may already exist.\n\n"${m.role}" at ${m.company} is already on the board — ${age}, in ${where}.${extra}\n\nCreate it anyway?`;
+}
+
 // Remote sync — talks to a Google Apps Script Web App backed by a Google Sheet.
 // Purely optional: if no syncUrl is configured, everything behaves exactly
 // as it did with only local storage. Note: Apps Script Web Apps trigger a
@@ -2774,7 +2867,7 @@ function mergeCardsAndUsers(remoteCards, remoteUsers, remoteResumes){
 // leaves the app looking broken with zero feedback. These work everywhere.
 let dialogResolve = null;
 
-function openDialogInternal({message, showInput, showCancel, defaultValue = ''}){
+function openDialogInternal({message, showInput, showCancel, defaultValue = '', okLabel = 'OK', cancelLabel = 'Cancel'}){
   return new Promise(resolve=>{
     dialogResolve = resolve;
     document.getElementById('dialogMessage').textContent = message || '';
@@ -2788,6 +2881,8 @@ function openDialogInternal({message, showInput, showCancel, defaultValue = ''})
       inputField.style.display = 'none';
     }
     document.getElementById('dialogCancelBtn').style.display = showCancel ? 'inline-block' : 'none';
+    document.getElementById('dialogOkBtn').textContent = okLabel;
+    document.getElementById('dialogCancelBtn').textContent = cancelLabel;
     document.getElementById('dialogOverlay').classList.add('open');
   });
 }
@@ -2819,8 +2914,8 @@ document.getElementById('dialogInput').addEventListener('keydown', (e)=>{
 function askPrompt(message, defaultValue = ''){
   return openDialogInternal({message, showInput:true, showCancel:true, defaultValue});
 }
-async function askConfirm(message){
-  return (await openDialogInternal({message, showInput:false, showCancel:true})) === true;
+async function askConfirm(message, okLabel = 'OK', cancelLabel = 'Cancel'){
+  return (await openDialogInternal({message, showInput:false, showCancel:true, okLabel, cancelLabel})) === true;
 }
 async function showAlertModal(message){
   await openDialogInternal({message, showInput:false, showCancel:false});
@@ -4350,7 +4445,7 @@ function openModal(card){
   document.getElementById('f-location').value = card ? card.location || '' : '';
   document.getElementById('f-salary').value = card ? card.salary || '' : '';
   document.getElementById('f-column').value = card ? card.column : 'postings';
-  document.getElementById('f-date').value = card ? card.date || '' : new Date().toISOString().slice(0,10);
+  document.getElementById('f-date').value = card ? card.date || '' : localISODate();
   document.getElementById('f-url').value = card ? card.url || '' : '';
   const existingRejectedTag = card && card.tags ? card.tags.find(t=>t.startsWith('REJECTED:')) : null;
   document.getElementById('f-rejection-reason-text').value = existingRejectedTag ? existingRejectedTag.slice('REJECTED:'.length) : '';
@@ -4497,7 +4592,7 @@ function openModalPrefill(data){
   document.getElementById('f-location').value = data.location || '';
   document.getElementById('f-salary').value = data.salary || '';
   document.getElementById('f-column').value = 'postings';
-  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f-date').value = localISODate();
   document.getElementById('f-url').value = data.url || '';
   document.getElementById('f-rejection-reason-text').value = '';
   document.getElementById('f-tags').value = '';
@@ -4610,6 +4705,13 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   if(!data.owner && column !== 'postings'){
     await showAlertModal('Pick or add a user first.');
     return;
+  }
+  // Brand-new entries only (not edits): warn if a card with the same
+  // title + company already exists, and only create it if confirmed.
+  // Cancelling leaves the form open so it can still be edited.
+  if(!editingId){
+    const dupes = findDuplicateCards(data.role, data.company);
+    if(dupes.length && !(await askConfirm(duplicateWarningText(dupes), 'Create anyway', 'Cancel'))) return;
   }
   pushUndoSnapshot();
   if(editingId){
