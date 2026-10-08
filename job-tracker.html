@@ -73,7 +73,7 @@
   }
   /* Scoped to the desktop header so it stops applying by itself when the
      gear is relocated into the mobile header. */
-  .topbar-main #settingsBtn{ margin-left:8px; }
+  .topbar-main #settingsBtn{ margin-left:12px; }
   .topbar h1{
     font-family:'Fraunces',serif;
     font-weight:500;
@@ -217,7 +217,7 @@
     display:inline-flex;
     align-items:baseline;
     gap:6px;
-    margin-left:12px;
+    margin-left:16px;
     white-space:nowrap;
     font-family:'Inter',sans-serif;
     font-weight:700;
@@ -229,7 +229,7 @@
   /* Header-row typography: bold "User:" / "Viewing:" labels as written,
      no left rule (brass strokes separate the groups instead). */
   .topbar-main .user-picker{ padding-left:0; border-left:none; }
-  .topbar-main .viewing-picker{ margin-left:12px; }
+  .topbar-main .viewing-picker{ margin-left:16px; }
   .topbar-main .user-picker label{
     font-family:'Inter',sans-serif;
     font-weight:700;
@@ -237,7 +237,7 @@
     text-transform:none;
     letter-spacing:0;
   }
-  .topbar-main .resume-wrap{ margin-left:0; margin-right:12px; }
+  .topbar-main .resume-wrap{ margin-left:0; margin-right:16px; }
   /* Dark-brass seam between the two halves of each solid-brass pill pair
      (+ From Posting | + Manual Entry, Export | Import). */
   .topbar-main .pair-right{ position:relative; }
@@ -251,16 +251,10 @@
     background:color-mix(in srgb, var(--brass) 45%, #1b1e24);
   }
   .topbar-main #exportBtn, .topbar-main #importBtn, .topbar-main #resumeBtn{ font-weight:700; }
-  /* Bold entry buttons keep their normal case; Synchronize Now is all-caps. */
-  .topbar-main .entry-btn{ font-weight:700; }
-  .topbar-main #syncBtn{
-    text-transform:uppercase;
-    font-weight:700;
-    letter-spacing:0.02em;
-    font-size:12.5px;
-    padding-left:14px;
-    padding-right:14px;
-  }
+  /* .add-btn's default 20px left margin was pushing this button away from the stroke before it. */
+  .topbar-main #resumeBtn{ margin-left:0; }
+  /* Bold header buttons, all in normal case. */
+  .topbar-main .entry-btn, .topbar-main #syncBtn{ font-weight:700; }
 
   .user-picker{
     display:flex;
@@ -313,7 +307,7 @@
      pill buttons rather than small controlbar items. */
   .filter-sep.header-sep{
     height:24px;
-    margin:0 10px;
+    margin:0 14px;
   }
   .reset-widths-wrap{
     display:flex;
@@ -359,6 +353,10 @@
      hide its outline rather than showing an empty bordered box. */
   #syncState:empty{
     border-color:transparent;
+    /* It's the last item in the header row, so nothing shifts when it
+       fills in — and an empty one must not wrap onto a line of its own
+       (that left a blank gap above the summary bar). */
+    display:none;
   }
   .controlbar input[type="text"]{
     flex:1;
@@ -1735,8 +1733,8 @@
     </div>
     <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:15px; display:flex; align-items:center;">⚙</button>
     <input type="file" id="importFile" accept="application/json" style="display:none;" />
-    <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; display:none; margin-left:12px;">Synchronize Now</button>
-    <span id="syncState" style="min-width:56px; margin-left:6px; white-space:nowrap; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim);"></span>
+    <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; display:none; margin-left:16px;">Synchronize Now</button>
+    <span id="syncState" style="min-width:56px; margin-left:8px; white-space:nowrap; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim);"></span>
   </div>
   <!-- Summary bar: now its own full-width row beneath the rest of the header. -->
   <div class="toprow">
