@@ -61,7 +61,7 @@
     align-items:stretch;
     padding:28px 32px 12px;
     border-bottom:1px solid var(--hairline);
-    gap:14px;
+    gap:4px;
   }
   /* First header row: title, pickers, resume, and every button. Wraps
      rather than overflowing now that Export/Import live here too. */
@@ -211,27 +211,55 @@
     50% { box-shadow: 0 0 0 7px rgba(201,163,93,0); }
   }
   .toprow{ display:flex; align-items:center; flex-wrap:wrap; gap:14px 24px; }
-  /* Deliberately bigger than the 12px stat labels beside it; centered on
-     the row's own vertical midline via .toprow's align-items:center. */
-  .processed{
-    display:flex;
+  /* Header readouts ("Day: 13", "Applications Processed: 4"): bold label
+     followed by a brass bold value, inline with the rest of the header row. */
+  .hdr-stat{
+    display:inline-flex;
     align-items:baseline;
-    gap:12px;
-    flex-shrink:0;
+    gap:6px;
+    margin-left:12px;
     white-space:nowrap;
-  }
-  .processed-label{
     font-family:'Inter',sans-serif;
-    font-weight:600;
-    font-size:16px;
-    color:var(--paper);
+    font-weight:700;
+    font-size:13px;
+    color:var(--paper-dim);
   }
-  .processed-num{
-    font-family:'Fraunces',serif;
-    font-weight:500;
-    font-size:34px;
-    line-height:1;
-    color:var(--brass);
+  .hdr-stat .hdr-num{ color:var(--brass); font-size:15px; }
+  .hdr-stat.hdr-first{ margin-left:0; }
+  /* Header-row typography: bold "User:" / "Viewing:" labels as written,
+     no left rule (brass strokes separate the groups instead). */
+  .topbar-main .user-picker{ padding-left:0; border-left:none; }
+  .topbar-main .viewing-picker{ margin-left:12px; }
+  .topbar-main .user-picker label{
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:13px;
+    text-transform:none;
+    letter-spacing:0;
+  }
+  .topbar-main .resume-wrap{ margin-left:0; margin-right:12px; }
+  /* Dark-brass seam between the two halves of each solid-brass pill pair
+     (+ From Posting | + Manual Entry, Export | Import). */
+  .topbar-main .pair-right{ position:relative; }
+  .topbar-main .pair-right::before{
+    content:'';
+    position:absolute;
+    left:0;
+    top:20%;
+    bottom:20%;
+    width:1px;
+    background:color-mix(in srgb, var(--brass) 45%, #1b1e24);
+  }
+  .topbar-main #exportBtn, .topbar-main #importBtn, .topbar-main #resumeBtn{ font-weight:700; }
+  /* Bold entry buttons keep their normal case; Synchronize Now is all-caps. */
+  .topbar-main .entry-btn{ font-weight:700; }
+  .topbar-main #syncBtn{
+    text-transform:uppercase;
+    font-weight:700;
+    letter-spacing:0.02em;
+    font-size:12.5px;
+    padding-left:14px;
+    padding-right:14px;
   }
 
   .user-picker{
@@ -285,7 +313,7 @@
      pill buttons rather than small controlbar items. */
   .filter-sep.header-sep{
     height:24px;
-    margin:0 14px;
+    margin:0 10px;
   }
   .reset-widths-wrap{
     display:flex;
@@ -1159,10 +1187,10 @@
   }
   .btn.primary:hover{ background:#dab472; }
   .btn.danger{ color:#e0a292; }
-  /* Sync settings dialog: pill buttons in the same style as the header
+  /* Sync settings, resume link and generic alert/confirm dialogs: pill buttons in the same style as the header
      (brass primary like the entry buttons, panel-colored secondary like
-     Synchronize Now). Scoped here so the other dialogs are untouched. */
-  #settingsOverlay .btn{
+     Synchronize Now). Scoped to these three so the form dialogs are untouched. */
+  #settingsOverlay .btn, #dialogOverlay .btn, #resumeOverlay .btn{
     border-radius:999px;
     padding:9px 12px;
     font-size:12.5px;
@@ -1170,15 +1198,15 @@
     white-space:nowrap;
     transition:background .12s, border-color .12s, color .12s;
   }
-  #settingsOverlay .modal-actions{ gap:6px; }
-  #settingsOverlay .modal-actions .btn{ margin-left:0 !important; } /* spacing comes from gap */
-  #settingsOverlay .btn:hover{ border-color:var(--brass-dim); }
-  #settingsOverlay .btn.primary:hover{ background:#dab472; border-color:#dab472; }
-  #settingsOverlay .btn.danger{
+  #settingsOverlay .modal-actions, #dialogOverlay .modal-actions, #resumeOverlay .modal-actions{ gap:6px; }
+  #settingsOverlay .modal-actions .btn, #dialogOverlay .modal-actions .btn, #resumeOverlay .modal-actions .btn{ margin-left:0 !important; } /* spacing comes from gap */
+  #settingsOverlay .btn:hover, #dialogOverlay .btn:hover, #resumeOverlay .btn:hover{ border-color:var(--brass-dim); }
+  #settingsOverlay .btn.primary:hover, #dialogOverlay .btn.primary:hover, #resumeOverlay .btn.primary:hover{ background:#dab472; border-color:#dab472; }
+  #settingsOverlay .btn.danger, #dialogOverlay .btn.danger, #resumeOverlay .btn.danger{
     background:transparent;
     border-color:rgba(224,162,146,0.45);
   }
-  #settingsOverlay .btn.danger:hover{
+  #settingsOverlay .btn.danger:hover, #dialogOverlay .btn.danger:hover, #resumeOverlay .btn.danger:hover{
     background:rgba(224,162,146,0.12);
     border-color:#e0a292;
   }
@@ -1674,46 +1702,44 @@
 
 <div class="topbar">
   <div class="topbar-main">
-    <h1>Job Search<span id="dayCount"></span></h1>
-    <div class="user-picker" id="userPickerWrap" style="margin-left:20px;">
-      <label>User</label>
+    <h1>Job Search</h1>
+    <div class="filter-sep header-sep"></div>
+    <div class="user-picker" id="userPickerWrap">
+      <label>User:</label>
       <select id="userSelect"></select>
     </div>
     <!-- Relocated here (previously in .toprow below) to sit directly next
          to the User dropdown it's paired with. -->
     <div class="user-picker viewing-picker" id="viewingWrap">
-      <label>Viewing</label>
+      <label>Viewing:</label>
       <select id="viewingUserSelect"></select>
     </div>
+    <div class="filter-sep header-sep"></div>
     <div class="resume-wrap" id="resumeWrap">
       <a class="add-btn" id="resumeBtn" style="border-radius:999px; text-decoration:none; display:inline-block; cursor:pointer;">Link Resume</a>
       <button class="icon-btn" id="resumeSettingsBtn" title="Change resume link" style="display:none; font-size:15px;">⚙</button>
     </div>
+    <span class="hdr-stat hdr-first" id="dayBox" style="display:none;"><span>Day:</span><span class="hdr-num" id="dayCount"></span></span>
+    <span class="hdr-stat" id="processedBox" title="Cards you've claimed that have moved past the Hopper"><span>Applications Processed:</span><span class="hdr-num" id="processedCount">0</span></span>
     <div class="filter-sep header-sep"></div>
     <div style="display:flex; gap:0;">
       <button class="add-btn entry-btn" id="openPaste">+ From Posting</button>
-      <button class="add-btn entry-btn" id="openAdd">+ Manual Entry</button>
+      <button class="add-btn entry-btn pair-right" id="openAdd">+ Manual Entry</button>
     </div>
     <!-- Brass divider so the Export/Import pair doesn't visually fuse
          with the entry buttons beside it (both pairs are solid brass). -->
     <div class="filter-sep header-sep"></div>
     <div style="display:flex; gap:0;">
       <button class="add-btn" id="exportBtn" style="border-radius:999px 0 0 999px; margin-left:0;">Export</button>
-      <button class="add-btn" id="importBtn" style="border-radius:0 999px 999px 0; margin-left:0;">Import</button>
+      <button class="add-btn pair-right" id="importBtn" style="border-radius:0 999px 999px 0; margin-left:0;">Import</button>
     </div>
     <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:15px; display:flex; align-items:center;">⚙</button>
     <input type="file" id="importFile" accept="application/json" style="display:none;" />
-    <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; display:none; margin-left:18px;">⇄ Synchronize Now</button>
-    <span id="syncState" style="min-width:60px; margin-left:8px; white-space:nowrap; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim);"></span>
+    <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; display:none; margin-left:12px;">Synchronize Now</button>
+    <span id="syncState" style="min-width:56px; margin-left:6px; white-space:nowrap; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim);"></span>
   </div>
   <!-- Summary bar: now its own full-width row beneath the rest of the header. -->
   <div class="toprow">
-    <!-- Peer of the summary bar (not nested in it): claimed cards that have
-         moved past the hopper for whoever's board is on screen. -->
-    <div class="processed" id="processedBox" title="Cards you've claimed that have moved past the Hopper">
-      <span class="processed-label">Applications Processed</span>
-      <span class="processed-num" id="processedCount">0</span>
-    </div>
     <div class="stats-wrap">
       <div class="stats" id="stats"></div>
       <div class="stats-fill-bar" id="statsFillBar"></div>
@@ -1844,8 +1870,10 @@
 </div>
 
 <div class="overlay" id="dialogOverlay">
-  <div class="modal" style="width:360px;">
+  <div class="modal" id="dialogModal" style="width:360px;">
     <p id="dialogMessage" style="font-size:13.5px; color:var(--paper); white-space:pre-line; margin:0 0 14px; line-height:1.5;"></p>
+    <div id="dialogExtra" style="display:none; margin:0 0 14px;"></div>
+    <p id="dialogFooter" style="display:none; font-size:13.5px; color:var(--paper); white-space:pre-line; margin:0 0 14px; line-height:1.5;"></p>
     <div class="field" id="dialogInputField" style="display:none;">
       <input id="dialogInput" />
     </div>
@@ -2116,12 +2144,13 @@ function hideSegTip(){
   }
 })();
 
-// "Job Search Day N": inclusive day count from the oldest card's date to
+// Header "Day: N": inclusive day count from the oldest card's date to
 // today (the oldest card's day is Day 1). Uses every non-deleted card on
 // the board, shared postings included. Cards without a valid date are
-// ignored; with none at all the title stays plain.
+// ignored; with none at all the readout is hidden.
 function updateDayCount(){
   const el = document.getElementById('dayCount');
+  const box = document.getElementById('dayBox');
   if(!el) return;
   let oldest = null;
   liveCards().forEach(c=>{
@@ -2130,11 +2159,12 @@ function updateDayCount(){
     const t = Date.UTC(+m[1], +m[2] - 1, +m[3]);
     if(oldest === null || t < oldest) oldest = t;
   });
-  if(oldest === null){ el.textContent = ''; return; }
+  if(oldest === null){ el.textContent = ''; if(box) box.style.display = 'none'; return; }
   const now = new Date();
   const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
   const days = Math.max(1, Math.round((today - oldest) / 86400000) + 1);
-  el.textContent = ` Day ${days}`;
+  el.textContent = String(days);
+  if(box) box.style.display = '';
 }
 
 function pushUndoSnapshot(){
@@ -2376,7 +2406,58 @@ function cardAgeDays(card){
   return Math.max(0, Math.round((today - start) / 86400000));
 }
 
-function duplicateWarningText(matches){
+// Read-only copy of a card, built from the same markup and classes the
+// board uses (minus drag, selection, pull and click-to-edit), with the
+// notes shown in full rather than as a preview + tooltip.
+function buildCardPreview(card){
+  const el = document.createElement('div');
+  el.className = 'card read-only';
+  el.dataset.col = card.column;
+  el.style.cursor = 'default';
+  const reasonTag = (card.tags || []).find(t=>t.startsWith('REJECTED:') || t.startsWith('DISCARDED:'));
+  const details = [];
+  if(reasonTag){
+    const rt = elideTagText(reasonTag);
+    details.push(`<span class="detail reason-pill"${rt.titleAttr}>${rt.display}</span>`);
+  }
+  if(card.location) details.push(`<span class="detail">${escapeHtml(card.location)}</span>`);
+  if(card.salary) details.push(`<span class="detail">${escapeHtml(card.salary)}</span>`);
+  if(card.date) details.push(`<span class="detail">${fmtDate(card.date)}</span>`);
+  const userTags = (card.tags || []).filter(t=>t!==reasonTag).map(t=>{
+    const ut = elideTagText(t);
+    return `<span class="utag${t.startsWith('from:') ? ' src' : ''}"${ut.titleAttr}>${ut.display}</span>`;
+  }).join('');
+  const npTag = card.url ? 'a' : 'div';
+  const npAttrs = card.url ? `href="${escapeAttr(card.url)}" target="_blank"` : '';
+  const npClass = card.url ? 'posting-link' : 'posting-link posting-link-empty';
+  el.innerHTML = `
+    <div class="card-bg-fx"></div>
+    <div class="card-border-fx"></div>
+    <span class="accent-dot"></span>
+    <div class="card-fade-wrap">
+      <${npTag} ${npAttrs} class="${npClass}">
+        <div class="link-border-fx"></div>
+        <p class="company">${escapeHtml(card.company || 'Unknown company')}</p>
+        <p class="role">${escapeHtml(card.role || '')}</p>
+        ${card.url ? `<span class="posting-link-hint">↗ View posting</span>` : ''}
+      </${npTag}>
+      <div class="nameplate-rule"></div>
+      <div class="details">${details.join('')}</div>
+      ${userTags ? `<div class="utags">${userTags}</div>` : ''}
+      ${card.notes ? `<div class="card-body"><p class="notes">${escapeHtml(card.notes)}</p></div>` : ''}
+    </div>`;
+  // The board fades each card's bottom edge out; here the whole card
+  // should stay readable.
+  const fadeWrap = el.querySelector('.card-fade-wrap');
+  fadeWrap.style.maskImage = 'none';
+  fadeWrap.style.webkitMaskImage = 'none';
+  clipResizeObserver.observe(el); // same corner-notch sizing as board cards
+  return el;
+}
+
+// Returns the pieces of the duplicate warning: text above the card
+// preview, the card itself, and the closing question.
+function duplicateWarning(matches){
   // Lead with the newest match — the most recent sighting of this posting.
   const sorted = matches.slice().sort((a,b)=> cardAgeDays(a) - cardAgeDays(b));
   const m = sorted[0];
@@ -2385,8 +2466,13 @@ function duplicateWarningText(matches){
   const colDef = COLUMNS.find(c=> c.key === m.column);
   const colName = !colDef ? m.column : m.column === 'hopper' ? hopperLabel() : m.column === 'discarded' ? discardedLabel() : colDef.label;
   const where = m.owner ? `${colName} (${m.owner})` : colName;
-  const extra = matches.length > 1 ? `\n\n${matches.length - 1} other matching card${matches.length - 1 === 1 ? '' : 's'} also found.` : '';
-  return `This posting may already exist.\n\n"${m.role}" at ${m.company} is already on the board — ${age}, in ${where}.${extra}\n\nCreate it anyway?`;
+  const others = matches.length - 1;
+  const extra = others > 0 ? ` ${others} other matching card${others === 1 ? ' was' : 's were'} also found.` : '';
+  return {
+    message: `This posting may already exist. A matching card is ${age}, in ${where}.${extra}`,
+    extraEl: buildCardPreview(m),
+    footer: 'Create it anyway?'
+  };
 }
 
 // Remote sync — talks to a Google Apps Script Web App backed by a Google Sheet.
@@ -2867,10 +2953,20 @@ function mergeCardsAndUsers(remoteCards, remoteUsers, remoteResumes){
 // leaves the app looking broken with zero feedback. These work everywhere.
 let dialogResolve = null;
 
-function openDialogInternal({message, showInput, showCancel, defaultValue = '', okLabel = 'OK', cancelLabel = 'Cancel'}){
+function openDialogInternal({message, showInput, showCancel, defaultValue = '', okLabel = 'OK', cancelLabel = 'Cancel', extraEl = null, footer = ''}){
   return new Promise(resolve=>{
     dialogResolve = resolve;
     document.getElementById('dialogMessage').textContent = message || '';
+    // Optional element (e.g. a card preview) shown between the message
+    // and a closing line; the dialog widens a little to fit it.
+    const extra = document.getElementById('dialogExtra');
+    extra.innerHTML = '';
+    extra.style.display = extraEl ? 'block' : 'none';
+    if(extraEl) extra.appendChild(extraEl);
+    const footerP = document.getElementById('dialogFooter');
+    footerP.textContent = footer || '';
+    footerP.style.display = footer ? 'block' : 'none';
+    document.getElementById('dialogModal').style.width = extraEl ? '420px' : '360px';
     const inputField = document.getElementById('dialogInputField');
     const input = document.getElementById('dialogInput');
     if(showInput){
@@ -2914,8 +3010,8 @@ document.getElementById('dialogInput').addEventListener('keydown', (e)=>{
 function askPrompt(message, defaultValue = ''){
   return openDialogInternal({message, showInput:true, showCancel:true, defaultValue});
 }
-async function askConfirm(message, okLabel = 'OK', cancelLabel = 'Cancel'){
-  return (await openDialogInternal({message, showInput:false, showCancel:true, okLabel, cancelLabel})) === true;
+async function askConfirm(message, okLabel = 'OK', cancelLabel = 'Cancel', extra = {}){
+  return (await openDialogInternal({message, showInput:false, showCancel:true, okLabel, cancelLabel, ...extra})) === true;
 }
 async function showAlertModal(message){
   await openDialogInternal({message, showInput:false, showCancel:false});
@@ -4711,7 +4807,10 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   // Cancelling leaves the form open so it can still be edited.
   if(!editingId){
     const dupes = findDuplicateCards(data.role, data.company);
-    if(dupes.length && !(await askConfirm(duplicateWarningText(dupes), 'Create anyway', 'Cancel'))) return;
+    if(dupes.length){
+      const w = duplicateWarning(dupes);
+      if(!(await askConfirm(w.message, 'Create anyway', 'Cancel', {extraEl: w.extraEl, footer: w.footer}))) return;
+    }
   }
   pushUndoSnapshot();
   if(editingId){
@@ -4819,7 +4918,7 @@ function updateSyncUI(){
   const btn = document.getElementById('syncBtn');
   btn.style.display = syncUrl ? 'inline-block' : 'none';
   btn.classList.toggle('sync-dirty', !!hasUnsyncedChanges);
-  btn.textContent = '⇄ Synchronize Now';
+  btn.textContent = 'Synchronize Now';
   btn.title = 'Pull others\' changes and push yours';
   // Keep the pill's "changes pending" state in sync with hasUnsyncedChanges,
   // but never stomp on a sync that's actively running or a synced/failed
