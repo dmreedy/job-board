@@ -4627,6 +4627,53 @@ function setView(view){
 document.getElementById('viewBoardBtn').addEventListener('click', ()=> setView('board'));
 document.getElementById('viewPostingsBtn').addEventListener('click', ()=> setView('postings'));
 
+// ---- Salary detection for pasted text ----
+// Mirrors the scrape server's body-text patterns. Built In (and a few
+// other boards) render the range as plain text with NO dollar sign, e.g.
+// "230K-350K Annually" — which the old "$"-only regex never matched.
+// Ordered most-specific-first so a real range wins over a stray number.
+const PASTE_SALARY_PATTERNS = [
+  // "$95,000 - $120,000" / "$95K - $120K", optional cadence
+  /\$\s?\d[\d,]*(?:\.\d+)?\s*[kK]?\s*(?:-|–|—|to)\s*\$?\s?\d[\d,]*(?:\.\d+)?\s*[kK]?(?:\s*(?:\/\s*(?:yr|hr)|per\s*(?:year|hour|annum)|annually|a\s*year|an\s*hour))?/i,
+  // Bare "230K-350K Annually" — no $ anywhere
+  /\b\d[\d,]*(?:\.\d+)?\s*[kK]\s*(?:-|–|—|to)\s*\d[\d,]*(?:\.\d+)?\s*[kK]\b(?:\s*(?:annually|per\s*year|a\s*year|\/\s*yr))?/i,
+  // Bare full-number range with a cadence word: "120,000 - 160,000 Annually"
+  /\b\d{2,3},\d{3}\s*(?:-|–|—|to)\s*\d{2,3},\d{3}\s*(?:annually|per\s*year|a\s*year|\/\s*yr)/i,
+  // Single value that carries a cadence word: "$120,000 per year"
+  /\$\s?\d[\d,]*(?:\.\d+)?\s*[kK]?\s*(?:\/\s*(?:yr|hr)|per\s*(?:year|hour|annum)|annually|an?\s*(?:year|hour))/i
+];
+function formatOneSalaryAmount(piece){
+  const m = piece.match(/\$?\s?([\d,]+(?:\.\d+)?)\s*([kK]?)/);
+  if(!m) return '';
+  let num = parseFloat(m[1].replace(/,/g, ''));
+  if(isNaN(num)) return '';
+  if(m[2]) num *= 1000;
+  return '$' + num.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+// "230K-350K Annually" -> "$230,000 - $350,000 Annually"
+function normalizeSalaryText(raw){
+  const flat = raw.replace(/\s+/g, ' ').trim();
+  const cadenceMatch = flat.match(/(annually|per\s*annum|per\s*year|a\s*year|\/\s*yr|per\s*hour|\/\s*hr|an\s*hour)\s*$/i);
+  const cadence = cadenceMatch ? ' ' + cadenceMatch[0].trim().replace(/^\w/, c => c.toUpperCase()) : '';
+  const numsPart = cadenceMatch ? flat.slice(0, cadenceMatch.index) : flat;
+  const pieces = numsPart.split(/-|–|—|\bto\b/i).map(x => x.trim()).filter(Boolean);
+  const formatted = pieces.map(formatOneSalaryAmount).filter(Boolean);
+  if(formatted.length === 2) return `${formatted[0]} - ${formatted[1]}${cadence}`;
+  if(formatted.length === 1) return `${formatted[0]}${cadence}`;
+  return flat;
+}
+// Returns { salary, raw } — salary normalized for the field, raw as it
+// appeared in the text (so its line can be dropped from the title/company guess).
+function findSalaryInText(text){
+  for(const re of PASTE_SALARY_PATTERNS){
+    const m = text.match(re);
+    if(m) return { salary: normalizeSalaryText(m[0]), raw: m[0] };
+  }
+  // Last resort: any "$123" figure, as before.
+  const loose = text.match(/\$\s?[\d,]+(?:\.\d+)?\s?(?:k|K)?(?:\s?-\s?\$?\s?[\d,]+(?:\.\d+)?\s?(?:k|K)?)?/);
+  return loose ? { salary: loose[0].trim(), raw: loose[0] } : null;
+}
+
 function parsePosting(text, url){
   const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
   const result = {role:'', company:'', location:'', salary:'', url: url || '', notes:''};
@@ -4634,8 +4681,9 @@ function parsePosting(text, url){
   const urlMatch = text.match(/https?:\/\/\S+/);
   if(!result.url && urlMatch) result.url = urlMatch[0];
 
-  const salaryMatch = text.match(/\$\s?[\d,]+(?:\.\d+)?\s?(?:k|K)?(?:\s?-\s?\$?\s?[\d,]+(?:\.\d+)?\s?(?:k|K)?)?/);
-  if(salaryMatch) result.salary = salaryMatch[0].trim();
+  const salaryMatch = findSalaryInText(text);
+  if(salaryMatch) result.salary = salaryMatch.salary;
+  const salaryFlat = salaryMatch ? salaryMatch.raw.replace(/\s+/g, ' ').trim() : '';
 
   const locationRegex = /\b([A-Z][a-zA-Z.]+(?:\s[A-Z][a-zA-Z.]+)*,\s?[A-Z]{2}\b)|\bRemote\b|\bHybrid\b|\bOn-?site\b/;
   let usedLineIdx = new Set();
@@ -4648,7 +4696,9 @@ function parsePosting(text, url){
 
   const remaining = lines.filter((l, idx)=>{
     if(usedLineIdx.has(idx)) return false;
-    if(salaryMatch && l.includes(salaryMatch[0])) return false;
+    if(salaryMatch && (l.includes(salaryFlat) ||
+        // match split across lines ("230K-350K" / "Annually"): drop each piece
+        (salaryFlat.includes(l) && /\d|annually|per\s/i.test(l)))) return false;
     if(urlMatch && l.includes(urlMatch[0])) return false;
     return true;
   });
