@@ -1,0 +1,1998 @@
+{
+  "version": 2,
+  "cards": [
+    {
+      "id": "sample-001",
+      "role": "Senior Software Engineer",
+      "company": "Harbor AI",
+      "location": "Boston, MA",
+      "salary": "$185k–$205k",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-08-29",
+      "url": "https://jobs.example.com/wellfound/harbor-ai/87397",
+      "tags": [
+        "from:wellfound",
+        "platform",
+        "climate"
+      ],
+      "notes": "Mentions LLM tooling heavily in the JD.",
+      "updatedAt": 1788017067101,
+      "deleted": false
+    },
+    {
+      "id": "sample-002",
+      "role": "Backend Engineer",
+      "company": "Meridian Cloud",
+      "location": "Somerville, MA",
+      "salary": "",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-10-07",
+      "url": "https://jobs.example.com/linkedin/meridian-cloud/87236",
+      "tags": [
+        "from:linkedin",
+        "python",
+        "startup",
+        "golang"
+      ],
+      "notes": "Hiring manager seems great; team of 8.",
+      "updatedAt": 1791388363876,
+      "deleted": false
+    },
+    {
+      "id": "sample-003",
+      "role": "Engineering Manager",
+      "company": "Ember Learning",
+      "location": "Hybrid – Boston, MA",
+      "salary": "",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-09-28",
+      "url": "https://jobs.example.com/indeed/ember-learning/22676",
+      "tags": [
+        "from:indeed",
+        "remote",
+        "startup"
+      ],
+      "notes": "Comp band is on the low side.",
+      "updatedAt": 1790588117523,
+      "deleted": false
+    },
+    {
+      "id": "sample-004",
+      "role": "Principal Engineer",
+      "company": "Copperline",
+      "location": "Hybrid – Cambridge, MA",
+      "salary": "$130k+",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-08-31",
+      "url": "https://jobs.example.com/builtin/copperline/85674",
+      "tags": [
+        "from:builtin",
+        "healthtech",
+        "kubernetes",
+        "climate"
+      ],
+      "notes": "Loop is 4 rounds: screen, system design, coding, behavioral.",
+      "updatedAt": 1788187332233,
+      "deleted": false
+    },
+    {
+      "id": "sample-005",
+      "role": "Backend Engineer",
+      "company": "Cinder Analytics",
+      "location": "Remote (US)",
+      "salary": "",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-10-06",
+      "url": "https://jobs.example.com/referral/cinder-analytics/93320",
+      "tags": [
+        "from:referral",
+        "llm",
+        "platform"
+      ],
+      "notes": "",
+      "updatedAt": 1791277916527,
+      "deleted": false
+    },
+    {
+      "id": "sample-006",
+      "role": "Platform Engineer",
+      "company": "Juniper Logistics",
+      "location": "Boston, MA",
+      "salary": "$170,000–$195,000",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-09-28",
+      "url": "https://jobs.example.com/linkedin/juniper-logistics/70589",
+      "tags": [
+        "from:linkedin",
+        "backend",
+        "llm",
+        "ml"
+      ],
+      "notes": "Mentions LLM tooling heavily in the JD.",
+      "updatedAt": 1790593084109,
+      "deleted": false
+    },
+    {
+      "id": "sample-007",
+      "role": "Data Engineer",
+      "company": "Ember Learning",
+      "location": "Remote",
+      "salary": "",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-08-29",
+      "url": "https://jobs.example.com/linkedin/ember-learning/45093",
+      "tags": [
+        "from:linkedin",
+        "infra",
+        "ai",
+        "kubernetes"
+      ],
+      "notes": "Referral from a former IBM colleague.",
+      "updatedAt": 1788005041182,
+      "deleted": false
+    },
+    {
+      "id": "sample-008",
+      "role": "Platform Engineer",
+      "company": "Fathom Data",
+      "location": "Remote (East Coast)",
+      "salary": "$140,000–$170,000",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-09-02",
+      "url": "https://jobs.example.com/linkedin/fathom-data/42325",
+      "tags": [
+        "from:linkedin",
+        "fintech",
+        "typescript",
+        "healthtech"
+      ],
+      "notes": "",
+      "updatedAt": 1788327127223,
+      "deleted": false
+    },
+    {
+      "id": "sample-009",
+      "role": "Technical Lead",
+      "company": "Copperline",
+      "location": "Cambridge, MA",
+      "salary": "$140k–$180k",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-09-04",
+      "url": "https://jobs.example.com/lever/copperline/16175",
+      "tags": [
+        "from:lever",
+        "typescript",
+        "golang"
+      ],
+      "notes": "",
+      "updatedAt": 1788530241572,
+      "deleted": false
+    },
+    {
+      "id": "sample-010",
+      "role": "Machine Learning Engineer",
+      "company": "Anchor Point",
+      "location": "Hybrid – Cambridge, MA",
+      "salary": "$170k+",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-09-29",
+      "url": "https://jobs.example.com/referral/anchor-point/82512",
+      "tags": [
+        "from:referral",
+        "series-b",
+        "llm",
+        "startup"
+      ],
+      "notes": "",
+      "updatedAt": 1790696829522,
+      "deleted": false
+    },
+    {
+      "id": "sample-011",
+      "role": "AI Product Engineer",
+      "company": "Dovetail Apps",
+      "location": "New York, NY",
+      "salary": "",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-10-01",
+      "url": "https://jobs.example.com/lever/dovetail-apps/10425",
+      "tags": [
+        "from:lever",
+        "infra",
+        "kubernetes"
+      ],
+      "notes": "",
+      "updatedAt": 1790852724261,
+      "deleted": false
+    },
+    {
+      "id": "sample-012",
+      "role": "Machine Learning Engineer",
+      "company": "Indigo Voice",
+      "location": "Somerville, MA",
+      "salary": "$170,000–$195,000",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-09-06",
+      "url": "https://jobs.example.com/lever/indigo-voice/59009",
+      "tags": [
+        "from:lever",
+        "ml"
+      ],
+      "notes": "",
+      "updatedAt": 1788699558628,
+      "deleted": false
+    },
+    {
+      "id": "sample-013",
+      "role": "AI Product Engineer",
+      "company": "Jackdaw Security",
+      "location": "Remote (East Coast)",
+      "salary": "$130k+",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-09-04",
+      "url": "https://jobs.example.com/lever/jackdaw-security/50306",
+      "tags": [
+        "from:lever",
+        "infra"
+      ],
+      "notes": "Loop is 4 rounds: screen, system design, coding, behavioral.",
+      "updatedAt": 1788533712708,
+      "deleted": false
+    },
+    {
+      "id": "sample-014",
+      "role": "Staff Software Engineer",
+      "company": "Willow Finance",
+      "location": "Somerville, MA",
+      "salary": "$200,000–$225,000",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-09-23",
+      "url": "https://jobs.example.com/builtin/willow-finance/96474",
+      "tags": [
+        "from:builtin",
+        "fintech",
+        "llm",
+        "typescript"
+      ],
+      "notes": "Need to tailor resume toward platform work.",
+      "updatedAt": 1790142303306,
+      "deleted": false
+    },
+    {
+      "id": "sample-015",
+      "role": "Data Engineer",
+      "company": "Copperline",
+      "location": "Somerville, MA",
+      "salary": "$200k+",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-09-28",
+      "url": "https://jobs.example.com/referral/copperline/62296",
+      "tags": [
+        "from:referral",
+        "series-b",
+        "startup",
+        "healthtech"
+      ],
+      "notes": "",
+      "updatedAt": 1790586140175,
+      "deleted": false
+    },
+    {
+      "id": "sample-016",
+      "role": "Applied AI Engineer",
+      "company": "Tidewater Labs",
+      "location": "Remote (US)",
+      "salary": "$150,000–$170,000",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-09-10",
+      "url": "https://jobs.example.com/builtin/tidewater-labs/87128",
+      "tags": [
+        "from:builtin",
+        "platform"
+      ],
+      "notes": "Loop is 4 rounds: screen, system design, coding, behavioral.",
+      "updatedAt": 1789055517431,
+      "deleted": false
+    },
+    {
+      "id": "sample-017",
+      "role": "Solutions Architect",
+      "company": "Fathom Data",
+      "location": "Remote",
+      "salary": "$200k–$230k",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-10-04",
+      "url": "https://jobs.example.com/builtin/fathom-data/77391",
+      "tags": [
+        "from:builtin",
+        "llm"
+      ],
+      "notes": "Loop is 4 rounds: screen, system design, coding, behavioral.",
+      "updatedAt": 1791110911708,
+      "deleted": false
+    },
+    {
+      "id": "sample-018",
+      "role": "Data Engineer",
+      "company": "Kiln & Co",
+      "location": "Remote (East Coast)",
+      "salary": "$200,000–$240,000",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-09-07",
+      "url": "https://jobs.example.com/linkedin/kiln-and-co/22363",
+      "tags": [
+        "from:linkedin",
+        "fintech",
+        "platform",
+        "typescript"
+      ],
+      "notes": "Referral from a former IBM colleague.",
+      "updatedAt": 1788767872645,
+      "deleted": false
+    },
+    {
+      "id": "sample-019",
+      "role": "Engineering Manager",
+      "company": "Nimbus Forge",
+      "location": "Hybrid – Cambridge, MA",
+      "salary": "$185k–$215k",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-09-16",
+      "url": "https://jobs.example.com/greenhouse/nimbus-forge/42591",
+      "tags": [
+        "from:greenhouse",
+        "ai",
+        "kubernetes",
+        "python"
+      ],
+      "notes": "Loop is 4 rounds: screen, system design, coding, behavioral.",
+      "updatedAt": 1789561635297,
+      "deleted": false
+    },
+    {
+      "id": "sample-020",
+      "role": "Machine Learning Engineer",
+      "company": "Opal Insurance",
+      "location": "Remote (East Coast)",
+      "salary": "",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-09-04",
+      "url": "https://jobs.example.com/greenhouse/opal-insurance/82132",
+      "tags": [
+        "from:greenhouse",
+        "backend"
+      ],
+      "notes": "Referral from a former IBM colleague.",
+      "updatedAt": 1788534205075,
+      "deleted": false
+    },
+    {
+      "id": "sample-021",
+      "role": "Staff Software Engineer",
+      "company": "Lumen Analytics",
+      "location": "Hybrid – Cambridge, MA",
+      "salary": "$160,000–$200,000",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-09-04",
+      "url": "https://jobs.example.com/referral/lumen-analytics/62565",
+      "tags": [
+        "from:referral",
+        "hybrid"
+      ],
+      "notes": "Recruiter reached out first; follow up Friday.",
+      "updatedAt": 1788526551390,
+      "deleted": false
+    },
+    {
+      "id": "sample-022",
+      "role": "Engineering Manager",
+      "company": "Lumen Analytics",
+      "location": "Somerville, MA",
+      "salary": "$185,000–$225,000",
+      "column": "postings",
+      "owner": null,
+      "date": "2026-09-14",
+      "url": "https://jobs.example.com/indeed/lumen-analytics/34890",
+      "tags": [
+        "from:indeed",
+        "ml",
+        "series-b"
+      ],
+      "notes": "Hiring manager seems great; team of 8.",
+      "updatedAt": 1789386990341,
+      "deleted": false
+    },
+    {
+      "id": "sample-023",
+      "role": "Backend Engineer",
+      "company": "Meridian Cloud",
+      "location": "Somerville, MA",
+      "salary": "",
+      "column": "hopper",
+      "owner": "Derek",
+      "date": "2026-10-07",
+      "url": "https://jobs.example.com/linkedin/meridian-cloud/87236",
+      "tags": [
+        "from:linkedin",
+        "python",
+        "startup",
+        "golang"
+      ],
+      "notes": "Referral from a former IBM colleague.",
+      "updatedAt": 1791373015734,
+      "deleted": false,
+      "sourceId": "sample-002"
+    },
+    {
+      "id": "sample-024",
+      "role": "Engineering Manager",
+      "company": "Nimbus Forge",
+      "location": "Hybrid – Cambridge, MA",
+      "salary": "$185k–$215k",
+      "column": "hopper",
+      "owner": "Derek",
+      "date": "2026-09-26",
+      "url": "https://jobs.example.com/greenhouse/nimbus-forge/42591",
+      "tags": [
+        "from:greenhouse",
+        "ai",
+        "kubernetes",
+        "python"
+      ],
+      "notes": "Loop is 4 rounds: screen, system design, coding, behavioral.",
+      "updatedAt": 1790417315478,
+      "deleted": false,
+      "sourceId": "sample-019"
+    },
+    {
+      "id": "sample-025",
+      "role": "Data Engineer",
+      "company": "Kiln & Co",
+      "location": "Remote (East Coast)",
+      "salary": "$200,000–$240,000",
+      "column": "hopper",
+      "owner": "Derek",
+      "date": "2026-10-01",
+      "url": "https://jobs.example.com/linkedin/kiln-and-co/22363",
+      "tags": [
+        "from:linkedin",
+        "fintech",
+        "platform",
+        "typescript"
+      ],
+      "notes": "Posted via careers page; no recruiter contact yet.",
+      "updatedAt": 1790856095457,
+      "deleted": false,
+      "sourceId": "sample-018"
+    },
+    {
+      "id": "sample-026",
+      "role": "Engineering Manager",
+      "company": "Lumen Analytics",
+      "location": "Somerville, MA",
+      "salary": "$185,000–$225,000",
+      "column": "hopper",
+      "owner": "Derek",
+      "date": "2026-09-22",
+      "url": "https://jobs.example.com/indeed/lumen-analytics/34890",
+      "tags": [
+        "from:indeed",
+        "ml",
+        "series-b"
+      ],
+      "notes": "",
+      "updatedAt": 1790072498419,
+      "deleted": false,
+      "sourceId": "sample-022"
+    },
+    {
+      "id": "sample-027",
+      "role": "AI Product Engineer",
+      "company": "Dovetail Apps",
+      "location": "New York, NY",
+      "salary": "",
+      "column": "hopper",
+      "owner": "Derek",
+      "date": "2026-09-19",
+      "url": "https://jobs.example.com/lever/dovetail-apps/10425",
+      "tags": [
+        "from:lever",
+        "infra",
+        "kubernetes"
+      ],
+      "notes": "Take-home due in 5 days.",
+      "updatedAt": 1789815323021,
+      "deleted": false,
+      "sourceId": "sample-011"
+    },
+    {
+      "id": "sample-028",
+      "role": "Staff Software Engineer",
+      "company": "Lumen Analytics",
+      "location": "Hybrid – Cambridge, MA",
+      "salary": "$160,000–$200,000",
+      "column": "hopper",
+      "owner": "Derek",
+      "date": "2026-09-29",
+      "url": "https://jobs.example.com/referral/lumen-analytics/62565",
+      "tags": [
+        "from:referral",
+        "hybrid"
+      ],
+      "notes": "",
+      "updatedAt": 1790669174312,
+      "deleted": false,
+      "sourceId": "sample-021"
+    },
+    {
+      "id": "sample-029",
+      "role": "Senior Software Engineer",
+      "company": "Brightpath Health",
+      "location": "Boston, MA",
+      "salary": "",
+      "column": "hopper",
+      "owner": "Derek",
+      "date": "2026-09-29",
+      "url": "https://jobs.example.com/indeed/brightpath-health/83519",
+      "tags": [
+        "from:indeed",
+        "backend"
+      ],
+      "notes": "Recruiter reached out first; follow up Friday.",
+      "updatedAt": 1790690092271,
+      "deleted": false
+    },
+    {
+      "id": "sample-030",
+      "role": "AI Product Engineer",
+      "company": "Ember Learning",
+      "location": "Somerville, MA",
+      "salary": "$140,000–$180,000",
+      "column": "hopper",
+      "owner": "Derek",
+      "date": "2026-10-05",
+      "url": "https://jobs.example.com/linkedin/ember-learning/15482",
+      "tags": [
+        "from:linkedin",
+        "ai",
+        "golang",
+        "ml"
+      ],
+      "notes": "Hiring manager seems great; team of 8.",
+      "updatedAt": 1791191528652,
+      "deleted": false
+    },
+    {
+      "id": "sample-031",
+      "role": "Backend Engineer",
+      "company": "Ironleaf",
+      "location": "Hybrid – Boston, MA",
+      "salary": "$200,000–$240,000",
+      "column": "hopper",
+      "owner": "Derek",
+      "date": "2026-10-06",
+      "url": "https://jobs.example.com/wellfound/ironleaf/41029",
+      "tags": [
+        "from:wellfound",
+        "kubernetes"
+      ],
+      "notes": "",
+      "updatedAt": 1791291494692,
+      "deleted": false
+    },
+    {
+      "id": "sample-032",
+      "role": "Senior Software Engineer",
+      "company": "Maple Street Tech",
+      "location": "Cambridge, MA",
+      "salary": "$150k–$175k",
+      "column": "hopper",
+      "owner": "Derek",
+      "date": "2026-10-02",
+      "url": "https://jobs.example.com/linkedin/maple-street-tech/60140",
+      "tags": [
+        "from:linkedin",
+        "infra",
+        "series-b",
+        "typescript"
+      ],
+      "notes": "",
+      "updatedAt": 1790954201236,
+      "deleted": false
+    },
+    {
+      "id": "sample-033",
+      "role": "Backend Engineer",
+      "company": "Alder Security",
+      "location": "Cambridge, MA",
+      "salary": "$140,000–$160,000",
+      "column": "hopper",
+      "owner": "Derek",
+      "date": "2026-09-22",
+      "url": "https://jobs.example.com/referral/alder-security/62227",
+      "tags": [
+        "from:referral",
+        "golang",
+        "ml"
+      ],
+      "notes": "Comp band is on the low side.",
+      "updatedAt": 1790074103266,
+      "deleted": false
+    },
+    {
+      "id": "sample-034",
+      "role": "Full Stack Engineer",
+      "company": "Jackdaw Security",
+      "location": "Somerville, MA",
+      "salary": "$150k–$170k",
+      "column": "hopper",
+      "owner": "Derek",
+      "date": "2026-10-05",
+      "url": "https://jobs.example.com/indeed/jackdaw-security/44237",
+      "tags": [
+        "from:indeed",
+        "climate",
+        "typescript",
+        "infra"
+      ],
+      "notes": "Take-home due in 5 days.",
+      "updatedAt": 1791177037283,
+      "deleted": false
+    },
+    {
+      "id": "sample-035",
+      "role": "Staff Software Engineer",
+      "company": "Brightpath Health",
+      "location": "Hybrid – Cambridge, MA",
+      "salary": "",
+      "column": "hopper",
+      "owner": "Derek",
+      "date": "2026-09-29",
+      "url": "https://jobs.example.com/lever/brightpath-health/85574",
+      "tags": [
+        "from:lever",
+        "golang",
+        "infra"
+      ],
+      "notes": "Loop is 4 rounds: screen, system design, coding, behavioral.",
+      "updatedAt": 1790680505862,
+      "deleted": false
+    },
+    {
+      "id": "sample-036",
+      "role": "Engineering Manager",
+      "company": "Fathom Data",
+      "location": "Remote (US)",
+      "salary": "$185k+",
+      "column": "applied",
+      "owner": "Derek",
+      "date": "2026-10-03",
+      "url": "https://jobs.example.com/builtin/fathom-data/96951",
+      "tags": [
+        "from:builtin",
+        "startup",
+        "golang",
+        "climate"
+      ],
+      "notes": "",
+      "updatedAt": 1791034836537,
+      "deleted": false
+    },
+    {
+      "id": "sample-037",
+      "role": "Full Stack Engineer",
+      "company": "Saltmarsh Games",
+      "location": "New York, NY",
+      "salary": "$170,000–$195,000",
+      "column": "applied",
+      "owner": "Derek",
+      "date": "2026-09-16",
+      "url": "https://jobs.example.com/wellfound/saltmarsh-games/65108",
+      "tags": [
+        "from:wellfound",
+        "infra",
+        "typescript"
+      ],
+      "notes": "",
+      "updatedAt": 1789548955992,
+      "deleted": false
+    },
+    {
+      "id": "sample-038",
+      "role": "Site Reliability Engineer",
+      "company": "Zephyr Maps",
+      "location": "New York, NY",
+      "salary": "$140k+",
+      "column": "applied",
+      "owner": "Derek",
+      "date": "2026-09-24",
+      "url": "https://jobs.example.com/indeed/zephyr-maps/70946",
+      "tags": [
+        "from:indeed",
+        "python",
+        "ml"
+      ],
+      "notes": "Need to tailor resume toward platform work.",
+      "updatedAt": 1790235927159,
+      "deleted": false
+    },
+    {
+      "id": "sample-039",
+      "role": "Applied AI Engineer",
+      "company": "Saltmarsh Games",
+      "location": "Somerville, MA",
+      "salary": "$185k–$215k",
+      "column": "applied",
+      "owner": "Derek",
+      "date": "2026-09-22",
+      "url": "https://jobs.example.com/referral/saltmarsh-games/40784",
+      "tags": [
+        "from:referral",
+        "hybrid",
+        "llm",
+        "remote"
+      ],
+      "notes": "",
+      "updatedAt": 1790071968103,
+      "deleted": false
+    },
+    {
+      "id": "sample-040",
+      "role": "Machine Learning Engineer",
+      "company": "Vantage Grid",
+      "location": "Remote (East Coast)",
+      "salary": "",
+      "column": "applied",
+      "owner": "Derek",
+      "date": "2026-09-21",
+      "url": "https://jobs.example.com/builtin/vantage-grid/64321",
+      "tags": [
+        "from:builtin",
+        "platform"
+      ],
+      "notes": "",
+      "updatedAt": 1789967767380,
+      "deleted": false
+    },
+    {
+      "id": "sample-041",
+      "role": "Technical Lead",
+      "company": "Fathom Data",
+      "location": "Boston, MA",
+      "salary": "$185k–$205k",
+      "column": "applied",
+      "owner": "Derek",
+      "date": "2026-09-23",
+      "url": "https://jobs.example.com/greenhouse/fathom-data/65724",
+      "tags": [
+        "from:greenhouse",
+        "typescript",
+        "platform"
+      ],
+      "notes": "Loop is 4 rounds: screen, system design, coding, behavioral.",
+      "updatedAt": 1790167396445,
+      "deleted": false
+    },
+    {
+      "id": "sample-042",
+      "role": "Senior Software Engineer",
+      "company": "Pinecone Robotics",
+      "location": "Remote (East Coast)",
+      "salary": "$140k+",
+      "column": "applied",
+      "owner": "Derek",
+      "date": "2026-09-02",
+      "url": "https://jobs.example.com/lever/pinecone-robotics/68008",
+      "tags": [
+        "from:lever",
+        "kubernetes"
+      ],
+      "notes": "Company raised Series B last spring.",
+      "updatedAt": 1788330924911,
+      "deleted": false
+    },
+    {
+      "id": "sample-043",
+      "role": "Applied AI Engineer",
+      "company": "Verdant Foods",
+      "location": "Cambridge, MA",
+      "salary": "",
+      "column": "applied",
+      "owner": "Derek",
+      "date": "2026-09-08",
+      "url": "https://jobs.example.com/linkedin/verdant-foods/92149",
+      "tags": [
+        "from:linkedin",
+        "fintech",
+        "healthtech",
+        "remote"
+      ],
+      "notes": "Loop is 4 rounds: screen, system design, coding, behavioral.",
+      "updatedAt": 1788864772078,
+      "deleted": false
+    },
+    {
+      "id": "sample-044",
+      "role": "Technical Lead",
+      "company": "Fernhill Software",
+      "location": "Hybrid – Boston, MA",
+      "salary": "$150,000–$170,000",
+      "column": "applied",
+      "owner": "Derek",
+      "date": "2026-09-07",
+      "url": "https://jobs.example.com/indeed/fernhill-software/29769",
+      "tags": [
+        "from:indeed",
+        "backend"
+      ],
+      "notes": "Loop is 4 rounds: screen, system design, coding, behavioral.",
+      "updatedAt": 1788771094937,
+      "deleted": false
+    },
+    {
+      "id": "sample-045",
+      "role": "Backend Engineer",
+      "company": "Fathom Data",
+      "location": "Somerville, MA",
+      "salary": "$160k–$200k",
+      "column": "applied",
+      "owner": "Derek",
+      "date": "2026-09-26",
+      "url": "https://jobs.example.com/builtin/fathom-data/37110",
+      "tags": [
+        "from:builtin",
+        "series-b",
+        "infra"
+      ],
+      "notes": "",
+      "updatedAt": 1790410204646,
+      "deleted": false
+    },
+    {
+      "id": "sample-046",
+      "role": "Site Reliability Engineer",
+      "company": "Jackdaw Security",
+      "location": "Remote (East Coast)",
+      "salary": "$130k+",
+      "column": "applied",
+      "owner": "Derek",
+      "date": "2026-09-11",
+      "url": "https://jobs.example.com/wellfound/jackdaw-security/61116",
+      "tags": [
+        "from:wellfound",
+        "typescript"
+      ],
+      "notes": "",
+      "updatedAt": 1789114279958,
+      "deleted": false
+    },
+    {
+      "id": "sample-047",
+      "role": "Technical Lead",
+      "company": "Hollow Oak",
+      "location": "New York, NY",
+      "salary": "$160k–$200k",
+      "column": "applied",
+      "owner": "Derek",
+      "date": "2026-09-01",
+      "url": "https://jobs.example.com/lever/hollow-oak/60968",
+      "tags": [
+        "from:lever",
+        "platform",
+        "fintech",
+        "kubernetes"
+      ],
+      "notes": "Comp band is on the low side.",
+      "updatedAt": 1788251266768,
+      "deleted": false
+    },
+    {
+      "id": "sample-048",
+      "role": "AI Product Engineer",
+      "company": "Pinecone Robotics",
+      "location": "Austin, TX",
+      "salary": "$185k–$205k",
+      "column": "applied",
+      "owner": "Derek",
+      "date": "2026-09-25",
+      "url": "https://jobs.example.com/linkedin/pinecone-robotics/94246",
+      "tags": [
+        "from:linkedin",
+        "python",
+        "typescript",
+        "ml"
+      ],
+      "notes": "Mentions LLM tooling heavily in the JD.",
+      "updatedAt": 1790342893362,
+      "deleted": false
+    },
+    {
+      "id": "sample-049",
+      "role": "Senior Software Engineer",
+      "company": "Stonebridge Data",
+      "location": "Remote (East Coast)",
+      "salary": "",
+      "column": "applied",
+      "owner": "Derek",
+      "date": "2026-09-06",
+      "url": "https://jobs.example.com/indeed/stonebridge-data/46471",
+      "tags": [
+        "from:indeed",
+        "infra",
+        "startup"
+      ],
+      "notes": "",
+      "updatedAt": 1788682109264,
+      "deleted": false
+    },
+    {
+      "id": "sample-050",
+      "role": "Senior Software Engineer",
+      "company": "Quill Media",
+      "location": "Remote (US)",
+      "salary": "$200k–$220k",
+      "column": "interviewing",
+      "owner": "Derek",
+      "date": "2026-09-15",
+      "url": "https://jobs.example.com/wellfound/quill-media/42411",
+      "tags": [
+        "from:wellfound",
+        "ai",
+        "golang",
+        "kubernetes"
+      ],
+      "notes": "Loop is 4 rounds: screen, system design, coding, behavioral.",
+      "updatedAt": 1791301032321,
+      "deleted": false
+    },
+    {
+      "id": "sample-051",
+      "role": "Machine Learning Engineer",
+      "company": "Beacon Learning",
+      "location": "New York, NY",
+      "salary": "$200,000–$230,000",
+      "column": "interviewing",
+      "owner": "Derek",
+      "date": "2026-08-23",
+      "url": "https://jobs.example.com/greenhouse/beacon-learning/89415",
+      "tags": [
+        "from:greenhouse",
+        "kubernetes",
+        "startup",
+        "platform"
+      ],
+      "notes": "Company raised Series B last spring.",
+      "updatedAt": 1791208313830,
+      "deleted": false
+    },
+    {
+      "id": "sample-052",
+      "role": "Site Reliability Engineer",
+      "company": "Quanta Retail",
+      "location": "Cambridge, MA",
+      "salary": "$130k–$155k",
+      "column": "interviewing",
+      "owner": "Derek",
+      "date": "2026-09-21",
+      "url": "https://jobs.example.com/builtin/quanta-retail/49529",
+      "tags": [
+        "from:builtin",
+        "typescript",
+        "climate"
+      ],
+      "notes": "",
+      "updatedAt": 1791035076133,
+      "deleted": false
+    },
+    {
+      "id": "sample-053",
+      "role": "Data Engineer",
+      "company": "Ironleaf",
+      "location": "Hybrid – Boston, MA",
+      "salary": "",
+      "column": "interviewing",
+      "owner": "Derek",
+      "date": "2026-08-26",
+      "url": "https://jobs.example.com/greenhouse/ironleaf/23833",
+      "tags": [
+        "from:greenhouse",
+        "golang",
+        "llm",
+        "backend"
+      ],
+      "notes": "Mentions LLM tooling heavily in the JD.",
+      "updatedAt": 1791364493973,
+      "deleted": false
+    },
+    {
+      "id": "sample-054",
+      "role": "Machine Learning Engineer",
+      "company": "Fathom Data",
+      "location": "New York, NY",
+      "salary": "",
+      "column": "interviewing",
+      "owner": "Derek",
+      "date": "2026-08-22",
+      "url": "https://jobs.example.com/greenhouse/fathom-data/67091",
+      "tags": [
+        "from:greenhouse",
+        "climate"
+      ],
+      "notes": "",
+      "updatedAt": 1790744239702,
+      "deleted": false
+    },
+    {
+      "id": "sample-055",
+      "role": "Infrastructure Engineer",
+      "company": "Beacon Learning",
+      "location": "Remote (East Coast)",
+      "salary": "$170k+",
+      "column": "interviewing",
+      "owner": "Derek",
+      "date": "2026-09-14",
+      "url": "https://jobs.example.com/builtin/beacon-learning/13761",
+      "tags": [
+        "from:builtin",
+        "healthtech",
+        "platform"
+      ],
+      "notes": "Need to tailor resume toward platform work.",
+      "updatedAt": 1790934988669,
+      "deleted": false
+    },
+    {
+      "id": "sample-056",
+      "role": "Platform Engineer",
+      "company": "Kiln & Co",
+      "location": "Austin, TX",
+      "salary": "$185k–$215k",
+      "column": "interviewing",
+      "owner": "Derek",
+      "date": "2026-09-20",
+      "url": "https://jobs.example.com/referral/kiln-and-co/77715",
+      "tags": [
+        "from:referral",
+        "infra",
+        "backend"
+      ],
+      "notes": "Loop is 4 rounds: screen, system design, coding, behavioral.",
+      "updatedAt": 1790778254612,
+      "deleted": false
+    },
+    {
+      "id": "sample-057",
+      "role": "Applied AI Engineer",
+      "company": "Maple Street Tech",
+      "location": "Remote (East Coast)",
+      "salary": "$160k–$180k",
+      "column": "offer",
+      "owner": "Derek",
+      "date": "2026-09-03",
+      "url": "https://jobs.example.com/lever/maple-street-tech/48566",
+      "tags": [
+        "from:lever",
+        "fintech"
+      ],
+      "notes": "Loop is 4 rounds: screen, system design, coding, behavioral.",
+      "updatedAt": 1790929661100,
+      "deleted": false
+    },
+    {
+      "id": "sample-058",
+      "role": "Site Reliability Engineer",
+      "company": "Cinder Analytics",
+      "location": "Hybrid – Cambridge, MA",
+      "salary": "$185k+",
+      "column": "offer",
+      "owner": "Derek",
+      "date": "2026-09-03",
+      "url": "https://jobs.example.com/indeed/cinder-analytics/69473",
+      "tags": [
+        "from:indeed",
+        "climate",
+        "golang"
+      ],
+      "notes": "Hiring manager seems great; team of 8.",
+      "updatedAt": 1791195422880,
+      "deleted": false
+    },
+    {
+      "id": "sample-059",
+      "role": "Technical Lead",
+      "company": "Harbor AI",
+      "location": "Cambridge, MA",
+      "salary": "$140k+",
+      "column": "offer",
+      "owner": "Derek",
+      "date": "2026-09-02",
+      "url": "https://jobs.example.com/linkedin/harbor-ai/87278",
+      "tags": [
+        "from:linkedin",
+        "kubernetes",
+        "hybrid"
+      ],
+      "notes": "",
+      "updatedAt": 1791267192216,
+      "deleted": false
+    },
+    {
+      "id": "sample-060",
+      "role": "Infrastructure Engineer",
+      "company": "Quanta Retail",
+      "location": "Boston, MA",
+      "salary": "$150,000–$170,000",
+      "column": "closed",
+      "owner": "Derek",
+      "date": "2026-08-16",
+      "url": "https://jobs.example.com/linkedin/quanta-retail/45954",
+      "tags": [
+        "from:linkedin",
+        "platform",
+        "golang",
+        "REJECTED:POSITION FILLED"
+      ],
+      "notes": "Recruiter reached out first; follow up Friday.",
+      "updatedAt": 1786892340821,
+      "deleted": false
+    },
+    {
+      "id": "sample-061",
+      "role": "Machine Learning Engineer",
+      "company": "Ember Learning",
+      "location": "Austin, TX",
+      "salary": "",
+      "column": "closed",
+      "owner": "Derek",
+      "date": "2026-08-19",
+      "url": "https://jobs.example.com/wellfound/ember-learning/67733",
+      "tags": [
+        "from:wellfound",
+        "kubernetes",
+        "python",
+        "REJECTED:POSITION FILLED"
+      ],
+      "notes": "Comp band is on the low side.",
+      "updatedAt": 1787142827564,
+      "deleted": false
+    },
+    {
+      "id": "sample-062",
+      "role": "Staff Software Engineer",
+      "company": "Quill Media",
+      "location": "Remote (East Coast)",
+      "salary": "$130,000–$150,000",
+      "column": "closed",
+      "owner": "Derek",
+      "date": "2026-09-20",
+      "url": "https://jobs.example.com/referral/quill-media/29555",
+      "tags": [
+        "from:referral",
+        "typescript",
+        "REJECTED:POSITION FILLED"
+      ],
+      "notes": "",
+      "updatedAt": 1789882228475,
+      "deleted": false
+    },
+    {
+      "id": "sample-063",
+      "role": "Data Engineer",
+      "company": "Harbor AI",
+      "location": "Remote (East Coast)",
+      "salary": "",
+      "column": "closed",
+      "owner": "Derek",
+      "date": "2026-07-25",
+      "url": "https://jobs.example.com/referral/harbor-ai/50026",
+      "tags": [
+        "from:referral",
+        "platform",
+        "typescript",
+        "REJECTED:POSITION FILLED"
+      ],
+      "notes": "Company raised Series B last spring.",
+      "updatedAt": 1784991158013,
+      "deleted": false
+    },
+    {
+      "id": "sample-064",
+      "role": "Principal Engineer",
+      "company": "Quanta Retail",
+      "location": "Remote (US)",
+      "salary": "$140,000–$165,000",
+      "column": "closed",
+      "owner": "Derek",
+      "date": "2026-08-15",
+      "url": "https://jobs.example.com/linkedin/quanta-retail/82350",
+      "tags": [
+        "from:linkedin",
+        "startup",
+        "backend",
+        "infra",
+        "REJECTED:COMP MISMATCH"
+      ],
+      "notes": "Referral from a former IBM colleague.",
+      "updatedAt": 1786799095274,
+      "deleted": false
+    },
+    {
+      "id": "sample-065",
+      "role": "Technical Lead",
+      "company": "Opal Insurance",
+      "location": "Cambridge, MA",
+      "salary": "",
+      "column": "closed",
+      "owner": "Derek",
+      "date": "2026-09-23",
+      "url": "https://jobs.example.com/lever/opal-insurance/19329",
+      "tags": [
+        "from:lever",
+        "ml",
+        "ai",
+        "REJECTED:INTERVIEW"
+      ],
+      "notes": "",
+      "updatedAt": 1790163535194,
+      "deleted": false
+    },
+    {
+      "id": "sample-066",
+      "role": "Site Reliability Engineer",
+      "company": "Anchor Point",
+      "location": "Remote (US)",
+      "salary": "$170,000–$195,000",
+      "column": "closed",
+      "owner": "Derek",
+      "date": "2026-07-26",
+      "url": "https://jobs.example.com/wellfound/anchor-point/44816",
+      "tags": [
+        "from:wellfound",
+        "series-b",
+        "REJECTED:POSITION FILLED"
+      ],
+      "notes": "",
+      "updatedAt": 1785072054685,
+      "deleted": false
+    },
+    {
+      "id": "sample-067",
+      "role": "Principal Engineer",
+      "company": "Paperkite",
+      "location": "Remote (East Coast)",
+      "salary": "",
+      "column": "closed",
+      "owner": "Derek",
+      "date": "2026-09-19",
+      "url": "https://jobs.example.com/indeed/paperkite/45683",
+      "tags": [
+        "from:indeed",
+        "ml",
+        "healthtech",
+        "ai",
+        "REJECTED:RESUME SCREEN"
+      ],
+      "notes": "Posted via careers page; no recruiter contact yet.",
+      "updatedAt": 1789797362451,
+      "deleted": false
+    },
+    {
+      "id": "sample-068",
+      "role": "Site Reliability Engineer",
+      "company": "Meridian Cloud",
+      "location": "Remote",
+      "salary": "$130k–$155k",
+      "column": "closed",
+      "owner": "Derek",
+      "date": "2026-08-23",
+      "url": "https://jobs.example.com/builtin/meridian-cloud/98117",
+      "tags": [
+        "from:builtin",
+        "infra",
+        "backend",
+        "REJECTED:INTERVIEW"
+      ],
+      "notes": "",
+      "updatedAt": 1787482713422,
+      "deleted": false
+    },
+    {
+      "id": "sample-069",
+      "role": "Principal Engineer",
+      "company": "Indigo Voice",
+      "location": "New York, NY",
+      "salary": "",
+      "column": "closed",
+      "owner": "Derek",
+      "date": "2026-08-18",
+      "url": "https://jobs.example.com/linkedin/indigo-voice/21959",
+      "tags": [
+        "from:linkedin",
+        "climate",
+        "healthtech",
+        "REJECTED:RESUME SCREEN"
+      ],
+      "notes": "Need to tailor resume toward platform work.",
+      "updatedAt": 1787045448729,
+      "deleted": false
+    },
+    {
+      "id": "sample-070",
+      "role": "Solutions Architect",
+      "company": "Granite Payments",
+      "location": "Hybrid – Cambridge, MA",
+      "salary": "$185k+",
+      "column": "closed",
+      "owner": "Derek",
+      "date": "2026-08-28",
+      "url": "https://jobs.example.com/builtin/granite-payments/96846",
+      "tags": [
+        "from:builtin",
+        "infra",
+        "REJECTED:POSITION FILLED"
+      ],
+      "notes": "Mentions LLM tooling heavily in the JD.",
+      "updatedAt": 1787895883642,
+      "deleted": false
+    },
+    {
+      "id": "sample-071",
+      "role": "Platform Engineer",
+      "company": "Meridian Cloud",
+      "location": "Somerville, MA",
+      "salary": "",
+      "column": "closed",
+      "owner": "Derek",
+      "date": "2026-09-21",
+      "url": "https://jobs.example.com/indeed/meridian-cloud/64165",
+      "tags": [
+        "from:indeed",
+        "kubernetes",
+        "typescript",
+        "REJECTED:INTERVIEW"
+      ],
+      "notes": "Recruiter reached out first; follow up Friday.",
+      "updatedAt": 1789993811549,
+      "deleted": false
+    },
+    {
+      "id": "sample-072",
+      "role": "Site Reliability Engineer",
+      "company": "Juniper Logistics",
+      "location": "Cambridge, MA",
+      "salary": "$150k+",
+      "column": "passed",
+      "owner": "Derek",
+      "date": "2026-08-16",
+      "url": "https://jobs.example.com/referral/juniper-logistics/67424",
+      "tags": [
+        "from:referral",
+        "healthtech",
+        "ai"
+      ],
+      "notes": "",
+      "updatedAt": 1786863471542,
+      "deleted": false
+    },
+    {
+      "id": "sample-073",
+      "role": "Solutions Architect",
+      "company": "Northwind Robotics",
+      "location": "New York, NY",
+      "salary": "",
+      "column": "passed",
+      "owner": "Derek",
+      "date": "2026-09-11",
+      "url": "https://jobs.example.com/lever/northwind-robotics/22217",
+      "tags": [
+        "from:lever",
+        "hybrid"
+      ],
+      "notes": "Loop is 4 rounds: screen, system design, coding, behavioral.",
+      "updatedAt": 1789134785754,
+      "deleted": false
+    },
+    {
+      "id": "sample-074",
+      "role": "Solutions Architect",
+      "company": "Harbor AI",
+      "location": "New York, NY",
+      "salary": "",
+      "column": "passed",
+      "owner": "Derek",
+      "date": "2026-08-20",
+      "url": "https://jobs.example.com/referral/harbor-ai/73242",
+      "tags": [
+        "from:referral",
+        "fintech"
+      ],
+      "notes": "Need to tailor resume toward platform work.",
+      "updatedAt": 1787225243496,
+      "deleted": false
+    },
+    {
+      "id": "sample-075",
+      "role": "Machine Learning Engineer",
+      "company": "Verdant Foods",
+      "location": "Boston, MA",
+      "salary": "$200k+",
+      "column": "passed",
+      "owner": "Derek",
+      "date": "2026-08-20",
+      "url": "https://jobs.example.com/greenhouse/verdant-foods/64387",
+      "tags": [
+        "from:greenhouse",
+        "climate"
+      ],
+      "notes": "Comp band is on the low side.",
+      "updatedAt": 1787207526302,
+      "deleted": false
+    },
+    {
+      "id": "sample-076",
+      "role": "Full Stack Engineer",
+      "company": "Lumen Analytics",
+      "location": "Remote (East Coast)",
+      "salary": "$170k+",
+      "column": "passed",
+      "owner": "Derek",
+      "date": "2026-09-01",
+      "url": "https://jobs.example.com/wellfound/lumen-analytics/53573",
+      "tags": [
+        "from:wellfound",
+        "fintech",
+        "remote"
+      ],
+      "notes": "Posted via careers page; no recruiter contact yet.",
+      "updatedAt": 1788241931026,
+      "deleted": false
+    },
+    {
+      "id": "sample-077",
+      "role": "Infrastructure Engineer",
+      "company": "Granite Payments",
+      "location": "Hybrid – Cambridge, MA",
+      "salary": "",
+      "column": "passed",
+      "owner": "Derek",
+      "date": "2026-08-25",
+      "url": "https://jobs.example.com/linkedin/granite-payments/59968",
+      "tags": [
+        "from:linkedin",
+        "platform",
+        "typescript",
+        "kubernetes"
+      ],
+      "notes": "Mentions LLM tooling heavily in the JD.",
+      "updatedAt": 1787663392385,
+      "deleted": false
+    },
+    {
+      "id": "sample-078",
+      "role": "Machine Learning Engineer",
+      "company": "Brightpath Health",
+      "location": "Remote (East Coast)",
+      "salary": "$130k–$170k",
+      "column": "passed",
+      "owner": "Derek",
+      "date": "2026-08-18",
+      "url": "https://jobs.example.com/lever/brightpath-health/28894",
+      "tags": [
+        "from:lever",
+        "infra",
+        "kubernetes",
+        "series-b"
+      ],
+      "notes": "Mentions LLM tooling heavily in the JD.",
+      "updatedAt": 1787058440994,
+      "deleted": false
+    },
+    {
+      "id": "sample-079",
+      "role": "Principal Engineer",
+      "company": "Quill Media",
+      "location": "Hybrid – Boston, MA",
+      "salary": "$200k+",
+      "column": "passed",
+      "owner": "Derek",
+      "date": "2026-09-14",
+      "url": "https://jobs.example.com/indeed/quill-media/92155",
+      "tags": [
+        "from:indeed",
+        "typescript",
+        "llm"
+      ],
+      "notes": "",
+      "updatedAt": 1789368854399,
+      "deleted": false
+    },
+    {
+      "id": "sample-080",
+      "role": "Senior Software Engineer",
+      "company": "Umbra Cyber",
+      "location": "New York, NY",
+      "salary": "",
+      "column": "passed",
+      "owner": "Derek",
+      "date": "2026-07-25",
+      "url": "https://jobs.example.com/lever/umbra-cyber/22903",
+      "tags": [
+        "from:lever",
+        "platform"
+      ],
+      "notes": "",
+      "updatedAt": 1784988455074,
+      "deleted": false
+    },
+    {
+      "id": "sample-081",
+      "role": "Technical Lead",
+      "company": "Paperkite",
+      "location": "Hybrid – Boston, MA",
+      "salary": "$200k+",
+      "column": "expired",
+      "owner": "Derek",
+      "date": "2026-08-16",
+      "url": "https://jobs.example.com/indeed/paperkite/56984",
+      "tags": [
+        "from:indeed",
+        "ai"
+      ],
+      "notes": "Comp band is on the low side.",
+      "updatedAt": 1786867097099,
+      "deleted": false
+    },
+    {
+      "id": "sample-082",
+      "role": "Data Engineer",
+      "company": "Beacon Learning",
+      "location": "Remote (US)",
+      "salary": "$170,000–$210,000",
+      "column": "expired",
+      "owner": "Derek",
+      "date": "2026-09-04",
+      "url": "https://jobs.example.com/greenhouse/beacon-learning/75230",
+      "tags": [
+        "from:greenhouse",
+        "hybrid",
+        "climate",
+        "llm"
+      ],
+      "notes": "Company raised Series B last spring.",
+      "updatedAt": 1788527995533,
+      "deleted": false
+    },
+    {
+      "id": "sample-083",
+      "role": "Solutions Architect",
+      "company": "Pinecone Robotics",
+      "location": "Remote (East Coast)",
+      "salary": "$150k–$175k",
+      "column": "expired",
+      "owner": "Derek",
+      "date": "2026-08-30",
+      "url": "https://jobs.example.com/indeed/pinecone-robotics/67898",
+      "tags": [
+        "from:indeed",
+        "backend",
+        "python"
+      ],
+      "notes": "Comp band is on the low side.",
+      "updatedAt": 1788066168731,
+      "deleted": false
+    },
+    {
+      "id": "sample-084",
+      "role": "Engineering Manager",
+      "company": "Anchor Point",
+      "location": "Cambridge, MA",
+      "salary": "$160k–$200k",
+      "column": "expired",
+      "owner": "Derek",
+      "date": "2026-08-25",
+      "url": "https://jobs.example.com/wellfound/anchor-point/41091",
+      "tags": [
+        "from:wellfound",
+        "healthtech",
+        "ml"
+      ],
+      "notes": "Mentions LLM tooling heavily in the JD.",
+      "updatedAt": 1787635218918,
+      "deleted": false
+    },
+    {
+      "id": "sample-085",
+      "role": "Full Stack Engineer",
+      "company": "Willow Finance",
+      "location": "New York, NY",
+      "salary": "",
+      "column": "expired",
+      "owner": "Derek",
+      "date": "2026-08-22",
+      "url": "https://jobs.example.com/wellfound/willow-finance/47512",
+      "tags": [
+        "from:wellfound",
+        "python",
+        "typescript"
+      ],
+      "notes": "",
+      "updatedAt": 1787398957017,
+      "deleted": false
+    },
+    {
+      "id": "sample-086",
+      "role": "Solutions Architect",
+      "company": "Alder Security",
+      "location": "Remote (US)",
+      "salary": "$185k+",
+      "column": "discarded",
+      "owner": "Derek",
+      "date": "2026-08-26",
+      "url": "https://jobs.example.com/linkedin/alder-security/67779",
+      "tags": [
+        "from:linkedin",
+        "backend",
+        "remote",
+        "infra",
+        "DISCARDED:ON-SITE ONLY"
+      ],
+      "notes": "Recruiter reached out first; follow up Friday.",
+      "updatedAt": 1787721105461,
+      "deleted": false
+    },
+    {
+      "id": "sample-087",
+      "role": "AI Product Engineer",
+      "company": "Meridian Cloud",
+      "location": "Cambridge, MA",
+      "salary": "$140k+",
+      "column": "discarded",
+      "owner": "Derek",
+      "date": "2026-09-10",
+      "url": "https://jobs.example.com/indeed/meridian-cloud/31567",
+      "tags": [
+        "from:indeed",
+        "series-b",
+        "hybrid",
+        "DISCARDED:LOW PAY"
+      ],
+      "notes": "Hiring manager seems great; team of 8.",
+      "updatedAt": 1789023663740,
+      "deleted": false
+    },
+    {
+      "id": "sample-088",
+      "role": "Infrastructure Engineer",
+      "company": "Hollow Oak",
+      "location": "Remote (US)",
+      "salary": "",
+      "column": "discarded",
+      "owner": "Derek",
+      "date": "2026-08-13",
+      "url": "https://jobs.example.com/indeed/hollow-oak/83048",
+      "tags": [
+        "from:indeed",
+        "healthtech",
+        "DISCARDED:ON-SITE ONLY"
+      ],
+      "notes": "Comp band is on the low side.",
+      "updatedAt": 1786630739877,
+      "deleted": false
+    },
+    {
+      "id": "sample-089",
+      "role": "Staff Software Engineer",
+      "company": "Umbra Cyber",
+      "location": "Hybrid – Boston, MA",
+      "salary": "",
+      "column": "discarded",
+      "owner": "Derek",
+      "date": "2026-08-14",
+      "url": "https://jobs.example.com/greenhouse/umbra-cyber/13280",
+      "tags": [
+        "from:greenhouse",
+        "backend",
+        "typescript",
+        "DISCARDED:DUPLICATE"
+      ],
+      "notes": "Company raised Series B last spring.",
+      "updatedAt": 1786685524589,
+      "deleted": false
+    },
+    {
+      "id": "sample-090",
+      "role": "Solutions Architect",
+      "company": "Fernhill Software",
+      "location": "Remote (US)",
+      "salary": "$140k–$160k",
+      "column": "discarded",
+      "owner": "Derek",
+      "date": "2026-09-13",
+      "url": "https://jobs.example.com/referral/fernhill-software/49893",
+      "tags": [
+        "from:referral",
+        "ml",
+        "series-b",
+        "DISCARDED:SENIORITY MISMATCH"
+      ],
+      "notes": "Need to tailor resume toward platform work.",
+      "updatedAt": 1789307407287,
+      "deleted": false
+    },
+    {
+      "id": "sample-091",
+      "role": "AI Product Engineer",
+      "company": "Beacon Learning",
+      "location": "Remote (East Coast)",
+      "salary": "$150,000–$190,000",
+      "column": "hopper",
+      "owner": "Sam",
+      "date": "2026-09-29",
+      "url": "https://jobs.example.com/lever/beacon-learning/64379",
+      "tags": [
+        "from:lever",
+        "typescript"
+      ],
+      "notes": "",
+      "updatedAt": 1790690954771,
+      "deleted": false
+    },
+    {
+      "id": "sample-092",
+      "role": "Engineering Manager",
+      "company": "Zephyr Maps",
+      "location": "Cambridge, MA",
+      "salary": "$160,000–$200,000",
+      "column": "hopper",
+      "owner": "Sam",
+      "date": "2026-09-04",
+      "url": "https://jobs.example.com/indeed/zephyr-maps/57537",
+      "tags": [
+        "from:indeed",
+        "golang"
+      ],
+      "notes": "Referral from a former IBM colleague.",
+      "updatedAt": 1788512948569,
+      "deleted": false
+    },
+    {
+      "id": "sample-093",
+      "role": "Platform Engineer",
+      "company": "Birchwood Cloud",
+      "location": "Remote (US)",
+      "salary": "$200k–$240k",
+      "column": "hopper",
+      "owner": "Sam",
+      "date": "2026-09-01",
+      "url": "https://jobs.example.com/builtin/birchwood-cloud/96870",
+      "tags": [
+        "from:builtin",
+        "backend",
+        "startup"
+      ],
+      "notes": "Loop is 4 rounds: screen, system design, coding, behavioral.",
+      "updatedAt": 1788276966726,
+      "deleted": false
+    },
+    {
+      "id": "sample-094",
+      "role": "Backend Engineer",
+      "company": "Helix Biotech",
+      "location": "Somerville, MA",
+      "salary": "$140,000–$165,000",
+      "column": "applied",
+      "owner": "Sam",
+      "date": "2026-10-02",
+      "url": "https://jobs.example.com/linkedin/helix-biotech/53064",
+      "tags": [
+        "from:linkedin",
+        "startup",
+        "llm",
+        "series-b"
+      ],
+      "notes": "",
+      "updatedAt": 1790946897807,
+      "deleted": false
+    },
+    {
+      "id": "sample-095",
+      "role": "Machine Learning Engineer",
+      "company": "Orchard Systems",
+      "location": "Remote",
+      "salary": "$140k+",
+      "column": "applied",
+      "owner": "Sam",
+      "date": "2026-08-28",
+      "url": "https://jobs.example.com/lever/orchard-systems/41186",
+      "tags": [
+        "from:lever",
+        "hybrid",
+        "kubernetes"
+      ],
+      "notes": "Company raised Series B last spring.",
+      "updatedAt": 1787911072065,
+      "deleted": false
+    },
+    {
+      "id": "sample-096",
+      "role": "Full Stack Engineer",
+      "company": "Stonebridge Data",
+      "location": "Somerville, MA",
+      "salary": "",
+      "column": "applied",
+      "owner": "Sam",
+      "date": "2026-10-04",
+      "url": "https://jobs.example.com/builtin/stonebridge-data/68756",
+      "tags": [
+        "from:builtin",
+        "series-b"
+      ],
+      "notes": "",
+      "updatedAt": 1791105303976,
+      "deleted": false
+    },
+    {
+      "id": "sample-097",
+      "role": "Staff Software Engineer",
+      "company": "Xylo Devices",
+      "location": "Somerville, MA",
+      "salary": "$150k–$190k",
+      "column": "applied",
+      "owner": "Sam",
+      "date": "2026-09-03",
+      "url": "https://jobs.example.com/greenhouse/xylo-devices/17972",
+      "tags": [
+        "from:greenhouse",
+        "platform",
+        "ai",
+        "golang"
+      ],
+      "notes": "Need to tailor resume toward platform work.",
+      "updatedAt": 1788424247923,
+      "deleted": false
+    },
+    {
+      "id": "sample-098",
+      "role": "Staff Software Engineer",
+      "company": "Dovetail Apps",
+      "location": "Remote (US)",
+      "salary": "$150k–$175k",
+      "column": "applied",
+      "owner": "Sam",
+      "date": "2026-09-08",
+      "url": "https://jobs.example.com/greenhouse/dovetail-apps/26540",
+      "tags": [
+        "from:greenhouse",
+        "healthtech",
+        "llm",
+        "climate"
+      ],
+      "notes": "Hiring manager seems great; team of 8.",
+      "updatedAt": 1788843916841,
+      "deleted": false
+    },
+    {
+      "id": "sample-099",
+      "role": "Site Reliability Engineer",
+      "company": "Kestrel Mobility",
+      "location": "Remote (US)",
+      "salary": "$200,000–$220,000",
+      "column": "interviewing",
+      "owner": "Sam",
+      "date": "2026-08-31",
+      "url": "https://jobs.example.com/lever/kestrel-mobility/66370",
+      "tags": [
+        "from:lever",
+        "healthtech",
+        "series-b"
+      ],
+      "notes": "Need to tailor resume toward platform work.",
+      "updatedAt": 1788176666056,
+      "deleted": false
+    },
+    {
+      "id": "sample-100",
+      "role": "Infrastructure Engineer",
+      "company": "Helix Biotech",
+      "location": "Hybrid – Boston, MA",
+      "salary": "$160k+",
+      "column": "interviewing",
+      "owner": "Sam",
+      "date": "2026-09-09",
+      "url": "https://jobs.example.com/greenhouse/helix-biotech/59060",
+      "tags": [
+        "from:greenhouse",
+        "series-b",
+        "kubernetes"
+      ],
+      "notes": "Take-home due in 5 days.",
+      "updatedAt": 1788937772421,
+      "deleted": false
+    },
+    {
+      "id": "sample-101",
+      "role": "Staff Software Engineer",
+      "company": "Meridian Cloud",
+      "location": "Boston, MA",
+      "salary": "$170k+",
+      "column": "closed",
+      "owner": "Sam",
+      "date": "2026-09-30",
+      "url": "https://jobs.example.com/greenhouse/meridian-cloud/97819",
+      "tags": [
+        "from:greenhouse",
+        "golang",
+        "REJECTED:RESUME SCREEN"
+      ],
+      "notes": "Referral from a former IBM colleague.",
+      "updatedAt": 1790756431100,
+      "deleted": false
+    },
+    {
+      "id": "sample-102",
+      "role": "Engineering Manager",
+      "company": "Indigo Voice",
+      "location": "New York, NY",
+      "salary": "$150,000–$170,000",
+      "column": "closed",
+      "owner": "Sam",
+      "date": "2026-08-24",
+      "url": "https://jobs.example.com/referral/indigo-voice/30280",
+      "tags": [
+        "from:referral",
+        "ai",
+        "ml",
+        "fintech",
+        "REJECTED:POSITION FILLED"
+      ],
+      "notes": "",
+      "updatedAt": 1787554840818,
+      "deleted": false
+    },
+    {
+      "id": "sample-103",
+      "role": "Infrastructure Engineer",
+      "company": "Ironleaf",
+      "location": "Austin, TX",
+      "salary": "$140k–$180k",
+      "column": "closed",
+      "owner": "Sam",
+      "date": "2026-09-29",
+      "url": "https://jobs.example.com/lever/ironleaf/89822",
+      "tags": [
+        "from:lever",
+        "kubernetes",
+        "backend",
+        "REJECTED:NO RESPONSE"
+      ],
+      "notes": "",
+      "updatedAt": 1790679651887,
+      "deleted": false
+    }
+  ],
+  "users": [
+    "Derek",
+    "Sam"
+  ]
+}

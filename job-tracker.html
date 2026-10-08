@@ -442,6 +442,13 @@
     padding:8px 16px;
   }
   .controlbar input[type="text"]:focus{ outline:none; border-color:var(--brass-dim); }
+  /* Minimal magnifying glass before the placeholder text in both search fields. */
+  #searchInput{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b909b' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='M15.5 15.5L21 21'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-size:14px 14px;
+  }
+  #searchInput{ background-position:14px center; padding-left:36px; }
   .controlbar select{
     background:var(--panel);
     border:1px solid var(--hairline);
@@ -573,19 +580,22 @@
     display:flex;
     align-items:flex-start;
     gap:7px;
-    overflow-x:hidden;
-    overflow-y:auto;
-    padding-right:6px;
-    scrollbar-width:thin;
-    scrollbar-color:var(--brass-dim) transparent;
+    overflow:hidden; /* the head stays put; only the tag array scrolls */
   }
   .fb-head{
     display:flex;
-    align-items:center;
+    align-items:flex-start;
     gap:7px;
-    height:var(--ctl-h);
     flex-shrink:0;
   }
+  .filterbar .fb-sep{ align-self:stretch; height:auto; margin:0 8px; }
+  /* "Filter by tag" sits on the button row's line; the (pill-sized) Find
+     field is directly beneath it, level with the tag array's second row
+     (the label's line is one ctl-h tall, which is exactly where the
+     array's first row ends and its gap begins). */
+  .fb-stack{ display:flex; flex-direction:column; align-items:flex-start; gap:0; }
+  .fb-stack .flabel{ margin-right:0; height:var(--ctl-h); line-height:var(--ctl-h); }
+  .fb-find{ display:flex; align-items:center; gap:7px; }
   .filterbar-scroll{
     display:flex;
     flex-wrap:wrap;
@@ -593,13 +603,18 @@
     gap:7px;
     flex:1 1 0;
     min-width:0;
-    padding-top:calc((var(--ctl-h) - 22px) / 2);
+    max-height:100%;
+    overflow-x:hidden;
+    overflow-y:auto;
+    padding:calc((var(--ctl-h) - 22px) / 2) 6px 2px 0;
+    scrollbar-width:thin;
+    scrollbar-color:var(--brass-dim) transparent;
   }
   .filterbar-scroll .ftag{ height:22px; line-height:16px; box-sizing:border-box; }
-  .fb-inner::-webkit-scrollbar{ width:8px; }
-  .fb-inner::-webkit-scrollbar-track{ background:transparent; }
-  .fb-inner::-webkit-scrollbar-thumb{ background:var(--brass-dim); border-radius:4px; }
-  .fb-inner::-webkit-scrollbar-thumb:hover{ background:var(--brass); }
+  .filterbar-scroll::-webkit-scrollbar{ width:8px; }
+  .filterbar-scroll::-webkit-scrollbar-track{ background:transparent; }
+  .filterbar-scroll::-webkit-scrollbar-thumb{ background:var(--brass-dim); border-radius:4px; }
+  .filterbar-scroll::-webkit-scrollbar-thumb:hover{ background:var(--brass); }
   .filterbar .flabel{
     font-family:'IBM Plex Mono',monospace;
     font-size:11px;
@@ -607,18 +622,25 @@
     margin-right:4px;
     flex-shrink:0;
   }
-  .controlbar .tag-filter-input{
-    flex:0 0 130px;
-    width:130px;
+  .controlbar input.tag-filter-input{
+    flex:0 0 112px;
+    width:112px;
+    height:22px;
+    box-sizing:border-box;
     min-width:0;
     max-width:none;
     background:var(--panel-2);
     border:1px solid var(--hairline);
-    border-radius:999px;
+    border-radius:12px;
     color:var(--paper);
     font-family:'IBM Plex Mono',monospace;
     font-size:11px;
-    padding:5px 12px;
+    line-height:16px;
+    padding:3px 11px 3px 26px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b909b' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='M15.5 15.5L21 21'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:9px center;
+    background-size:12px 12px;
   }
   .controlbar .tag-filter-input:focus{ outline:none; border-color:var(--brass-dim); }
   .ftag{
@@ -2350,10 +2372,10 @@ function renderFilterbar(){
     return;
   }
   bar.style.display = 'flex';
-  bar.innerHTML = `<div class="fb-inner"><div class="fb-head"><div class="filter-sep"></div><span class="flabel">Filter by tag</span>` +
-    `<input type="text" id="tagFilterInput" class="tag-filter-input" placeholder="Find tag…" autocomplete="off" spellcheck="false" />` +
+  bar.innerHTML = `<div class="fb-inner"><div class="filter-sep fb-sep"></div><div class="fb-head"><div class="fb-stack"><span class="flabel">Filter by tag</span>` +
+    `<div class="fb-find"><input type="text" id="tagFilterInput" class="tag-filter-input" placeholder="Find tag…" autocomplete="off" spellcheck="false" />` +
     (activeTagFilters.length ? `<button class="ftag clear" id="clearFilters">Clear</button>` : '') +
-    `</div><div class="filterbar-scroll" id="filterbarScroll"></div></div>`;
+    `</div></div></div><div class="filterbar-scroll" id="filterbarScroll"></div></div>`;
 
   const scroll = document.getElementById('filterbarScroll');
   const tagInput = document.getElementById('tagFilterInput');
