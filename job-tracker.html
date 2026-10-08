@@ -65,11 +65,44 @@
   }
   /* First header row: title, pickers, resume, and every button. Wraps
      rather than overflowing now that Export/Import live here too. */
+  /* Header row, built from groups (title | pickers | resume + counts |
+     buttons). Lines may only break BETWEEN groups, and a group's leading
+     brass stroke disappears when it lands at the start of a line:
+     .topbar-main clips; .topbar-groups is shifted left by exactly one
+     group lead-in (29px = 14px gap + 1px stroke + 14px gap), so on a
+     wrapped line that lead-in — stroke included — sits outside the clip.
+     The 8px padding/-8px margin pair gives the Sync button's pulse glow
+     room to draw inside the clip box without changing the layout. */
   .topbar-main{
+    overflow:hidden;
+    padding:8px;
+    margin:-8px -8px -2px;
+  }
+  .topbar-groups{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    row-gap:10px;
+    margin-left:-29px;
+  }
+  .hdr-chunk{
+    position:relative;
     display:flex;
     align-items:center;
-    flex-wrap:wrap;
-    row-gap:10px;
+    flex-shrink:0;
+    white-space:nowrap;
+    padding-left:29px;
+  }
+  .hdr-chunk::before{
+    content:'';
+    position:absolute;
+    left:14px;
+    top:50%;
+    width:1px;
+    height:24px;
+    transform:translateY(-50%);
+    background:var(--brass);
+    opacity:0.5;
   }
   /* Scoped to the desktop header so it stops applying by itself when the
      gear is relocated into the mobile header. */
@@ -199,6 +232,11 @@
     font-weight:700;
   }
 
+  /* Nothing local to push: dimmed, but still clickable when sync is set up
+     (a sync also pulls other people's changes). */
+  #syncBtn.sync-idle{ opacity:0.45; }
+  #syncBtn.sync-idle:not(:disabled):hover{ opacity:0.85; }
+  #syncBtn:disabled{ cursor:not-allowed; }
   #syncBtn.sync-dirty{
     background:var(--brass) !important;
     color:#1b1e24 !important;
@@ -206,12 +244,37 @@
     font-weight:600;
     animation: sync-pulse 1.7s ease-in-out infinite;
   }
+  /* Status rings (drawn outside the button so its size never changes). */
+  @property --sync-a{ syntax:'<angle>'; inherits:false; initial-value:0deg; }
+  #syncBtn{ position:relative; }
+  #syncBtn.sync-running::after, #syncBtn.sync-failed::after{
+    content:''; position:absolute; inset:-4px; padding:2px;
+    border-radius:999px; pointer-events:none;
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;
+    mask:linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  }
+  #syncBtn.sync-running{ opacity:1; }
+  #syncBtn.sync-running::after{
+    background:conic-gradient(from var(--sync-a), #4fae6a 0deg, rgba(79,174,106,0) 200deg, rgba(79,174,106,0) 360deg);
+    animation:sync-spin 1s linear infinite;
+  }
+  @keyframes sync-spin{ to{ --sync-a:360deg; } }
+  #syncBtn.sync-failed{ opacity:1; }
+  #syncBtn.sync-failed::after{ background:#d4533b; }
+  .sync-tip{
+    position:fixed; z-index:10000; pointer-events:none; display:none;
+    max-width:360px; background:var(--panel-2); color:var(--paper);
+    border:1px solid #d4533b; border-radius:4px; padding:6px 10px;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; line-height:1.4;
+    white-space:pre-wrap; overflow-wrap:anywhere;
+  }
   @keyframes sync-pulse{
     0%, 100% { box-shadow: 0 0 0 0 rgba(201,163,93,0.55); }
     50% { box-shadow: 0 0 0 7px rgba(201,163,93,0); }
   }
   .toprow{ display:flex; align-items:center; flex-wrap:wrap; gap:14px 24px; }
-  /* Header readouts ("Day: 13", "Applications Processed: 4"): bold label
+  /* Header readouts ("Days: 13", "Submissions: 4"): bold label
      followed by a brass bold value, inline with the rest of the header row. */
   .hdr-stat{
     display:inline-flex;
@@ -238,6 +301,12 @@
     letter-spacing:0;
   }
   .topbar-main .resume-wrap{ margin-left:0; margin-right:16px; }
+  .topbar-main #exportBtn, .topbar-main #importBtn, .topbar-main #resumeBtn{ font-weight:700; }
+  /* .add-btn's default 20px left margin was pushing this button away from the stroke before it. */
+  .topbar-main #resumeBtn{ margin-left:0; }
+  /* The two button pairs sit 16px apart with no stroke between them; the
+     stroke before the first pair separates them from the readouts. */
+  .topbar-main .hdr-group{ margin-left:16px; }
   /* Dark-brass seam between the two halves of each solid-brass pill pair
      (+ From Posting | + Manual Entry, Export | Import). */
   .topbar-main .pair-right{ position:relative; }
@@ -250,9 +319,6 @@
     width:1px;
     background:color-mix(in srgb, var(--brass) 45%, #1b1e24);
   }
-  .topbar-main #exportBtn, .topbar-main #importBtn, .topbar-main #resumeBtn{ font-weight:700; }
-  /* .add-btn's default 20px left margin was pushing this button away from the stroke before it. */
-  .topbar-main #resumeBtn{ margin-left:0; }
   /* Bold header buttons, all in normal case. */
   .topbar-main .entry-btn, .topbar-main #syncBtn{ font-weight:700; }
 
@@ -334,29 +400,6 @@
   .reset-widths-wrap:active .reset-widths-btn{ background:#8a4433; }
   .reset-widths-label{
     line-height:1;
-  }
-  @keyframes sync-text-pulse{
-    0%, 100% { opacity:0.35; }
-    50% { opacity:1; }
-  }
-  #syncState.sync-pulse{
-    animation: sync-text-pulse 1.7s ease-in-out infinite; /* matches #syncBtn.sync-dirty's sync-pulse rate above */
-  }
-  #syncState{
-    display:inline-block;
-    border:1px solid var(--brass-dim);
-    border-radius:999px;
-    padding:4px 12px 4px 16px;
-  }
-  /* No sync state to show (sync isn't configured, or between states) —
-     keep the box's footprint so nothing else in the header shifts, but
-     hide its outline rather than showing an empty bordered box. */
-  #syncState:empty{
-    border-color:transparent;
-    /* It's the last item in the header row, so nothing shifts when it
-       fills in — and an empty one must not wrap onto a line of its own
-       (that left a blank gap above the summary bar). */
-    display:none;
   }
   .controlbar input[type="text"]{
     flex:1;
@@ -1317,13 +1360,6 @@
     margin-left:0 !important;
     box-sizing:border-box;
   }
-  .m-header-sync #syncState{
-    display:block;
-    width:fit-content;
-    margin:6px auto 0 !important;
-    text-align:center;
-  }
-  .m-header-sync #syncState:empty{ margin:0 !important; }
 
   .m-main{
     flex:1;
@@ -1699,43 +1735,42 @@
      ============================================================ -->
 
 <div class="topbar">
-  <div class="topbar-main">
-    <h1>Job Search</h1>
-    <div class="filter-sep header-sep"></div>
-    <div class="user-picker" id="userPickerWrap">
-      <label>User:</label>
-      <select id="userSelect"></select>
+  <div class="topbar-main"><div class="topbar-groups">
+    <div class="hdr-chunk">
+      <div class="user-picker" id="userPickerWrap">
+        <label>User:</label>
+        <select id="userSelect"></select>
+      </div>
+      <!-- Relocated here (previously in .toprow below) to sit directly next
+           to the User dropdown it's paired with. -->
+      <div class="user-picker viewing-picker" id="viewingWrap">
+        <label>Viewing:</label>
+        <select id="viewingUserSelect"></select>
+      </div>
     </div>
-    <!-- Relocated here (previously in .toprow below) to sit directly next
-         to the User dropdown it's paired with. -->
-    <div class="user-picker viewing-picker" id="viewingWrap">
-      <label>Viewing:</label>
-      <select id="viewingUserSelect"></select>
+    <div class="hdr-chunk">
+      <div class="resume-wrap" id="resumeWrap">
+        <a class="add-btn" id="resumeBtn" style="border-radius:999px; text-decoration:none; display:inline-block; cursor:pointer;">Link Resume</a>
+        <button class="icon-btn" id="resumeSettingsBtn" title="Change resume link" style="display:none; font-size:15px;">⚙</button>
+      </div>
+      <span class="hdr-stat hdr-first" id="dayBox" style="display:none;"><span>Days:</span><span class="hdr-num" id="dayCount"></span></span>
+      <span class="hdr-stat" id="submittedBox" title="Cards in Applied, Interviewing, Offer, Rejected and Ghosted"><span>Submissions:</span><span class="hdr-num" id="submittedCount">0</span></span>
+      <span class="hdr-stat" id="rejectionsBox" title="Cards in Rejected and Ghosted"><span>Rejections:</span><span class="hdr-num" id="rejectionsCount">0</span></span>
     </div>
-    <div class="filter-sep header-sep"></div>
-    <div class="resume-wrap" id="resumeWrap">
-      <a class="add-btn" id="resumeBtn" style="border-radius:999px; text-decoration:none; display:inline-block; cursor:pointer;">Link Resume</a>
-      <button class="icon-btn" id="resumeSettingsBtn" title="Change resume link" style="display:none; font-size:15px;">⚙</button>
+    <div class="hdr-chunk">
+      <div style="display:flex; gap:0;">
+        <button class="add-btn entry-btn" id="openPaste">+ From Posting</button>
+        <button class="add-btn entry-btn pair-right" id="openAdd">+ Manual Entry</button>
+      </div>
+      <div class="hdr-group" style="display:flex; gap:0;">
+        <button class="add-btn" id="exportBtn" style="border-radius:999px 0 0 999px; margin-left:0;">Export</button>
+        <button class="add-btn pair-right" id="importBtn" style="border-radius:0 999px 999px 0; margin-left:0;">Import</button>
+      </div>
+      <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:15px; display:flex; align-items:center;">⚙</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;" />
+      <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; margin-left:16px;">Sync</button>
     </div>
-    <span class="hdr-stat hdr-first" id="dayBox" style="display:none;"><span>Day:</span><span class="hdr-num" id="dayCount"></span></span>
-    <span class="hdr-stat" id="processedBox" title="Cards you've claimed that have moved past the Hopper"><span>Applications Processed:</span><span class="hdr-num" id="processedCount">0</span></span>
-    <div class="filter-sep header-sep"></div>
-    <div style="display:flex; gap:0;">
-      <button class="add-btn entry-btn" id="openPaste">+ From Posting</button>
-      <button class="add-btn entry-btn pair-right" id="openAdd">+ Manual Entry</button>
-    </div>
-    <!-- Brass divider so the Export/Import pair doesn't visually fuse
-         with the entry buttons beside it (both pairs are solid brass). -->
-    <div class="filter-sep header-sep"></div>
-    <div style="display:flex; gap:0;">
-      <button class="add-btn" id="exportBtn" style="border-radius:999px 0 0 999px; margin-left:0;">Export</button>
-      <button class="add-btn pair-right" id="importBtn" style="border-radius:0 999px 999px 0; margin-left:0;">Import</button>
-    </div>
-    <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:15px; display:flex; align-items:center;">⚙</button>
-    <input type="file" id="importFile" accept="application/json" style="display:none;" />
-    <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; display:none; margin-left:16px;">Synchronize Now</button>
-    <span id="syncState" style="min-width:56px; margin-left:8px; white-space:nowrap; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-dim);"></span>
-  </div>
+  </div></div>
   <!-- Summary bar: now its own full-width row beneath the rest of the header. -->
   <div class="toprow">
     <div class="stats-wrap">
@@ -2654,15 +2689,15 @@ let isSyncing = false;
 // out, or the next explicit setSyncIndicator call moves past it).
 let pillLocked = false;
 
-// Browser-tab sync indicator: swaps the favicon for a brass dot with an
-// expanding-ring pulse while a sync runs, and a solid red dot if it
-// failed; puts the normal favicon back otherwise. Frames are drawn on a
+// Browser-tab sync indicator: mirrors the Sync button: brass pulse when changes
+// are pending, a green ring spinning around the dot while syncing, a
+// solid red ring if it failed; puts the normal favicon back otherwise. Frames are drawn on a
 // canvas and swapped in as PNG data URLs, since animated SVG favicons
 // aren't reliably animated by browsers. (Background tabs throttle timers
 // to ~1/sec, so the pulse looks choppier there — it still reads fine.)
 const tabIcon = (function(){
   const link = document.querySelector('link[rel="icon"]');
-  if(!link) return { syncing(){}, failed(){}, off(){} };
+  if(!link) return { syncing(){}, failed(){}, pending(){}, off(){} };
   const originalHref = link.getAttribute('href');
   const originalType = link.getAttribute('type');
   const PERIOD_MS = 1700; // same rhythm as the Synchronize button's pulse
@@ -2695,18 +2730,34 @@ const tabIcon = (function(){
     ctx.beginPath(); ctx.arc(32, 32, core, 0, Math.PI * 2); ctx.fill();
     show();
   }
+  function drawSpin(){
+    const a = (Date.now() % 1000) / 1000 * Math.PI * 2;
+    base();
+    ctx.fillStyle = '#c9a35d';
+    ctx.beginPath(); ctx.arc(32, 32, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.strokeStyle = '#4fae6a';
+    ctx.beginPath(); ctx.arc(32, 32, 24, a, a + Math.PI * 1.2); ctx.stroke();
+    show();
+  }
   function stop(){ if(timer){ clearInterval(timer); timer = null; } }
   return {
-    syncing(){
-      if(timer) return;
+    pending(){
+      stop();
       drawPulse();
       timer = setInterval(drawPulse, 90);
+    },
+    syncing(){
+      stop();
+      drawSpin();
+      timer = setInterval(drawSpin, 60);
     },
     failed(){
       stop();
       base();
-      ctx.fillStyle = '#d4533b';
-      ctx.beginPath(); ctx.arc(32, 32, 17, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#c9a35d';
+      ctx.beginPath(); ctx.arc(32, 32, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = 7; ctx.strokeStyle = '#d4533b';
+      ctx.beginPath(); ctx.arc(32, 32, 24, 0, Math.PI * 2); ctx.stroke();
       show();
     },
     off(){
@@ -2717,65 +2768,56 @@ const tabIcon = (function(){
   };
 })();
 
+function showSyncTip(){
+  const btn = document.getElementById('syncBtn');
+  if(!btn || !btn.classList.contains('sync-failed')) return;
+  let tip = document.getElementById('syncTip');
+  if(!tip){
+    tip = document.createElement('div');
+    tip.id = 'syncTip';
+    tip.className = 'sync-tip';
+    document.body.appendChild(tip);
+  }
+  tip.textContent = 'Sync failed: ' + (lastSyncError || 'Unknown error');
+  tip.style.display = 'block';
+  const r = btn.getBoundingClientRect();
+  const w = tip.offsetWidth;
+  let left = Math.min(r.right - w, window.innerWidth - w - 8);
+  tip.style.left = Math.max(8, left) + 'px';
+  tip.style.top = (r.bottom + 10) + 'px';
+}
+function hideSyncTip(){
+  const tip = document.getElementById('syncTip');
+  if(tip) tip.style.display = 'none';
+}
+(function wireSyncTip(){
+  const btn = document.getElementById('syncBtn');
+  btn.addEventListener('mouseenter', showSyncTip);
+  btn.addEventListener('mouseleave', hideSyncTip);
+  btn.addEventListener('click', hideSyncTip);
+})();
+
 function setSyncIndicator(state){
-  // state: 'synced' | 'failed' | 'off' | 'syncing' | 'pending'
+  // state: 'off' | 'pending' | 'syncing' | 'synced' | 'failed'
+  // The Sync button itself is the indicator (see updateSyncUI); 'synced'
+  // is just "no changes pending" again.
+  if(state === 'synced') state = hasUnsyncedChanges ? 'pending' : 'off';
+  isSyncing = state === 'syncing';
+  pillLocked = state === 'failed'; // a failure sticks until the next attempt
   if(state === 'syncing') tabIcon.syncing();
   else if(state === 'failed') tabIcon.failed();
-  else tabIcon.off(); // 'off' | 'pending' | 'synced'
-  const el = document.getElementById('syncState');
-  if(!el) return;
-  clearTimeout(setSyncIndicator._t);
-  if(state === 'off'){
-    isSyncing = false;
-    pillLocked = false;
-    el.textContent = '';
-    el.title = '';
-    el.style.cursor = 'default';
-    el.classList.remove('sync-pulse');
-    return;
+  else if(state === 'pending') tabIcon.pending();
+  else tabIcon.off();
+  const btn = document.getElementById('syncBtn');
+  if(btn){
+    btn.classList.toggle('sync-running', state === 'syncing');
+    btn.classList.toggle('sync-failed', state === 'failed');
+    if(state !== 'failed') hideSyncTip();
+    btn.classList.toggle('sync-dirty', state === 'pending');
+    btn.classList.toggle('sync-idle', state === 'off');
+    if(state === 'failed') btn.title = '';
   }
-  if(state === 'syncing'){
-    isSyncing = true;
-    pillLocked = true;
-    el.textContent = 'syncing…';
-    el.style.color = 'var(--paper-dim)';
-    el.title = '';
-    el.style.cursor = 'default';
-    el.classList.add('sync-pulse');
-    return;
-  }
-  isSyncing = false;
-  if(state === 'pending'){
-    pillLocked = false;
-    el.classList.remove('sync-pulse');
-    el.textContent = 'changes pending';
-    el.style.color = 'var(--paper-dim)';
-    el.title = 'You have local changes not yet pushed to the shared Sheet';
-    el.style.cursor = 'default';
-    return;
-  }
-  // 'synced' or 'failed'
-  pillLocked = true;
-  el.classList.remove('sync-pulse');
-  el.textContent = state === 'synced' ? 'synced' : 'sync failed (tap for detail)';
-  el.style.color = state === 'synced' ? 'var(--paper-dim)' : '#e0a292';
-  el.title = state === 'failed' ? (lastSyncError || 'Unknown error') : '';
-  el.style.cursor = state === 'failed' ? 'help' : 'default';
-  if(state === 'synced'){
-    // Flash "synced" briefly, then hand the pill back to whatever's
-    // actually true afterward — still-pending changes if any landed
-    // while the flash was showing, otherwise empty.
-    setSyncIndicator._t = setTimeout(()=>{
-      pillLocked = false;
-      setSyncIndicator(hasUnsyncedChanges ? 'pending' : 'off');
-    }, 1600);
-  }
-  // 'failed' stays put (no timeout) until the next explicit sync attempt
-  // or state change — it's worth keeping visible/clickable.
 }
-document.getElementById('syncState').addEventListener('click', ()=>{
-  if(lastSyncError) showAlertModal(`Last sync error:\n\n${lastSyncError}`);
-});
 
 let hasUnsyncedChanges = false;
 
@@ -3185,6 +3227,7 @@ async function load(){
     const res = await store.get(LAST_SYNC_KEY);
     lastSyncAt = res && res.value ? (Number(res.value) || 0) : 0;
   }catch(e){ lastSyncAt = 0; }
+  updateSyncUI(); // initial look of the (always visible) Sync button
 
   // Show whatever's cached locally right away, rather than leaving the
   // board blank with no feedback while the remote fetch (below) is in
@@ -3462,7 +3505,7 @@ function renderViewingUserSelect(){
   const sel = document.getElementById('viewingUserSelect');
   if(!sel) return;
   if(viewingUser && !users.includes(viewingUser)) viewingUser = null;
-  const myselfLabel = currentUser ? `${currentUser} (myself)` : '(myself)';
+  const myselfLabel = currentUser ? `${currentUser} (me)` : '(me)';
   sel.innerHTML = `<option value="">${escapeHtml(myselfLabel)}</option>`
     + users.filter(u=>u!==currentUser).map(u=>`<option value="${escapeAttr(u)}">${escapeHtml(u)}</option>`).join('');
   sel.value = viewingUser || '';
@@ -3854,13 +3897,16 @@ function render(){
   const mSideBarEl = document.getElementById('mSideBar');
   if(mSideBarEl) mSideBarEl.innerHTML = statsSegHtml.map(seg=> segMarkup(seg, true)).join('');
 
-  // "Applications Processed": everything the viewed user has claimed or
-  // entered, minus what's still sitting in their Hopper. Counts all of
-  // their cards, not just the ones passing the current search/tag filter.
+  // The viewed user's own cards (outside Postings), regardless of the
+  // current search/tag filters, feed the header readouts below.
   const mine = liveCards().filter(c=> c.owner === viewedUser && c.column !== 'postings');
-  const processedN = Math.max(0, mine.length - mine.filter(c=> c.column === 'hopper').length);
-  const processedEl = document.getElementById('processedCount');
-  if(processedEl) processedEl.textContent = String(processedN);
+  // Submitted = anything that got past the Hopper and was actually applied
+  // for (not Expired/Discarded); Rejections = Rejected + Ghosted.
+  const countIn = keys => mine.filter(c=> keys.includes(c.column)).length;
+  const submittedEl = document.getElementById('submittedCount');
+  if(submittedEl) submittedEl.textContent = String(countIn(['applied','interviewing','offer','closed','passed']));
+  const rejectionsEl = document.getElementById('rejectionsCount');
+  if(rejectionsEl) rejectionsEl.textContent = String(countIn(['closed','passed']));
 
   updateDayCount();
 
@@ -4162,7 +4208,9 @@ function render(){
     COLUMNS.forEach(col=>{
       const colEl = buildColumnEl(col);
       board.appendChild(colEl);
-      if(col.shared){
+      // After Postings (shared vs personal), and after Ghosted: everything
+      // to its right (Expired, Discarded) never had an application submitted.
+      if(col.shared || col.key === 'passed'){
         const divider = document.createElement('div');
         divider.className = 'board-divider';
         board.appendChild(divider);
@@ -4964,16 +5012,26 @@ document.getElementById('importFile').addEventListener('change', async (e)=>{
 
 function updateSyncUI(){
   const btn = document.getElementById('syncBtn');
-  btn.style.display = syncUrl ? 'inline-block' : 'none';
-  btn.classList.toggle('sync-dirty', !!hasUnsyncedChanges);
-  btn.textContent = 'Synchronize Now';
-  btn.title = 'Pull others\' changes and push yours';
-  // Keep the pill's "changes pending" state in sync with hasUnsyncedChanges,
-  // but never stomp on a sync that's actively running or a synced/failed
-  // flash that's still showing — those own the pill until their own
-  // lifecycle hands it back (see setSyncIndicator).
-  if(!pillLocked && !isSyncing){
+  // Always visible; its look is the sync status: grey = nothing pending,
+  // pulsing brass = local changes pending, green ring = syncing, red
+  // ring = last sync failed (hover for the reason). Without a sync URL
+  // there is nothing to sync to, so it is disabled.
+  btn.style.display = 'inline-block';
+  btn.disabled = !syncUrl;
+  btn.textContent = 'Sync';
+  if(!syncUrl){
+    isSyncing = false; pillLocked = false;
+    setSyncIndicator('off');
+  } else if(!pillLocked && !isSyncing){
     setSyncIndicator(hasUnsyncedChanges ? 'pending' : 'off');
+  }
+  if(!btn.classList.contains('sync-failed')){
+    btn.title = !syncUrl
+      ? 'Sync isn\'t set up — use the ⚙ button to connect a shared Sheet'
+      : isSyncing ? 'Syncing…'
+      : hasUnsyncedChanges
+        ? 'Pull others\' changes and push yours'
+        : 'No local changes — click to pull others\' changes';
   }
 }
 
@@ -5089,7 +5147,6 @@ document.getElementById('syncBtn').addEventListener('click', synchronize);
   const userPicker = document.getElementById('userPickerWrap');
   const settingsBtn = document.getElementById('settingsBtn');
   const syncBtn = document.getElementById('syncBtn');
-  const syncState = document.getElementById('syncState');
 
   // Original desktop homes, captured once before anything ever moves.
   // userPicker's anchor is the "+From Posting/+Manual Entry" button
@@ -5101,7 +5158,7 @@ document.getElementById('syncBtn').addEventListener('click', synchronize);
   const userPickerAnchor = userPicker ? userPicker.nextSibling : null;
   const settingsBtnHome = settingsBtn ? settingsBtn.parentElement : null;
   const settingsBtnAnchor = settingsBtn ? settingsBtn.nextSibling : null; // the hidden importFile input
-  const syncHome = syncBtn ? syncBtn.parentElement : null; // syncState's original parent too
+  const syncHome = syncBtn ? syncBtn.parentElement : null; 
 
   function apply(isMobile){
     if(userPicker && mHeaderActions){
@@ -5111,10 +5168,6 @@ document.getElementById('syncBtn').addEventListener('click', synchronize);
     if(syncBtn && mHeaderSync){
       if(isMobile) mHeaderSync.appendChild(syncBtn);
       else syncHome.appendChild(syncBtn);
-    }
-    if(syncState && mHeaderSync){
-      if(isMobile) mHeaderSync.appendChild(syncState);
-      else syncHome.appendChild(syncState);
     }
     // The gear sits right after Export | Import, ahead of the sync controls,
     // so it's restored with insertBefore against its captured original
