@@ -288,17 +288,43 @@
   /* Left block: the button row with Reset Filters / Card aging beneath it.
      The tag filter sits beside it, top-aligned, and can grow downward
      without pushing those controls anywhere. */
-  .ctl-left{ display:flex; flex-direction:column; gap:8px; flex:0 1 auto; min-width:0; }
-  /* One shared line height for the button row and the tag filter's head, so
-     their centers coincide exactly (the tags' first row is centered on it
-     too: 22px tags, padded down by half the difference). */
+  /* One shared line height for the button row and the tag filter's head
+     (the tags' first row is centered on it too: 22px tags, padded down by
+     half the difference). */
   .controlbar{ --ctl-h:36px; }
-  .ctl-row{ display:flex; align-items:center; flex-wrap:nowrap; gap:10px; height:var(--ctl-h); }
-  /* Search scales with the window so the tag filter can stay beside the
-     buttons on mid-size screens instead of dropping to its own line. */
-  .ctl-row #searchInput{ flex:0 0 auto; width:clamp(120px, 40vw - 420px, 340px); }
-  .ctl-subrow{ display:flex; align-items:center; gap:14px; padding-left:16px; }
+  .ctl-row{ display:flex; align-items:center; flex-wrap:wrap; gap:10px; min-height:var(--ctl-btn-h); padding-bottom:4px; }
+  /* Search scales with the window so everything stays on the first line
+     at mid-size widths. */
+  /* One height for every control on the first line: pill buttons, toggles,
+     both search fields and the cog. */
+  .controlbar{ --ctl-btn-h:34px; }
+  .ctl-row .add-btn, .ctl-row .view-btn, .ctl-row .entry-btn,
+  .ctl-row #searchInput, .ctl-row #tagFilterInput{
+    height:var(--ctl-btn-h);
+    box-sizing:border-box;
+    padding-top:0;
+    padding-bottom:0;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    line-height:1;
+  }
+  .ctl-row #searchInput, .ctl-row #tagFilterInput{
+    display:block;
+    flex:0 0 auto;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    justify-content:flex-start;
+  }
+  .ctl-row .btn-unit .icon-btn{ height:var(--ctl-btn-h); width:var(--ctl-btn-h); padding:0; justify-content:center; }
+  .ctl-subrow{ height:var(--ctl-btn-h); }
+  .ctl-row #searchInput{ width:clamp(120px, 18vw - 160px, 230px); }
+  .ctl-row #tagFilterInput{ width:clamp(110px, 9vw - 20px, 150px); }
+  /* Reset Filters / Card aging: right after the Sync unit, on the same line. */
+  .ctl-subrow{ display:flex; align-items:center; gap:14px; flex-shrink:0; margin-left:20px; }
   .ctl-subrow .reset-widths-wrap{ margin-left:0; }
+  /* A button with its settings cog is one unit of design. */
+  .btn-unit{ display:inline-flex; align-items:center; flex-shrink:0; margin-left:16px; }
   .ctl-actions{ display:flex; align-items:center; flex-shrink:0; }
   /* Header readouts ("Days: 13", "Submissions: 4"): bold label
      followed by a brass bold value, inline with the rest of the header row. */
@@ -382,10 +408,9 @@
 
   .controlbar{
     display:flex;
-    align-items:center;
-    flex-wrap:wrap;
-    align-items:flex-start;
-    gap:8px 0;
+    flex-direction:column;
+    align-items:stretch;
+    gap:0;
     padding:10px 32px 0;
   }
   .filter-sep{
@@ -443,12 +468,12 @@
   }
   .controlbar input[type="text"]:focus{ outline:none; border-color:var(--brass-dim); }
   /* Minimal magnifying glass before the placeholder text in both search fields. */
-  #searchInput{
+  #searchInput, #tagFilterInput{
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b909b' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='M15.5 15.5L21 21'/%3E%3C/svg%3E");
     background-repeat:no-repeat;
     background-size:14px 14px;
   }
-  #searchInput{ background-position:14px center; padding-left:36px; }
+  #searchInput, #tagFilterInput{ background-position:14px center; padding-left:36px; }
   .controlbar select{
     background:var(--panel);
     border:1px solid var(--hairline);
@@ -561,52 +586,21 @@
   }
   .pull-btn.disabled:hover{ border-color:var(--hairline); color:var(--paper-dim); }
 
-  /* Tag filter, right of the control bar's left block. Its box stretches to
-     exactly the left block's height (button row + Reset/aging row) — the
-     inner element is absolutely positioned so a long tag list never makes
-     the bar taller; it scrolls vertically instead. The label / Find field
-     / Clear head is centered on the button row's line, and the tag array
-     beside it starts with its first row on that same line, then descends. */
-  .filterbar{
-    position:relative;
-    align-self:stretch;
-    flex:1 1 260px;
-    min-width:0;
-    min-height:64px; /* when wrapped below the buttons on narrow windows */
-  }
-  .fb-inner{
-    position:absolute;
-    inset:0;
-    display:flex;
-    align-items:flex-start;
-    gap:7px;
-    overflow:hidden; /* the head stays put; only the tag array scrolls */
-  }
-  .fb-head{
-    display:flex;
-    align-items:flex-start;
-    gap:7px;
-    flex-shrink:0;
-  }
-  .filterbar .fb-sep{ align-self:stretch; height:auto; margin:0 8px; }
-  /* "Filter by tag" sits on the button row's line; the (pill-sized) Find
-     field is directly beneath it, level with the tag array's second row
-     (the label's line is one ctl-h tall, which is exactly where the
-     array's first row ends and its gap begins). */
-  .fb-stack{ display:flex; flex-direction:column; align-items:flex-start; gap:0; }
-  .fb-stack .flabel{ margin-right:0; height:var(--ctl-h); line-height:var(--ctl-h); }
-  .fb-find{ display:flex; align-items:center; gap:7px; }
+  /* Tag array: the only thing on the control bar's second line. Fills the
+     full width, never scrolls sideways, and scrolls vertically past two
+     rows of pills. (The Find tag field lives on the first line.) */
+  .filterbar{ min-width:0; }
   .filterbar-scroll{
     display:flex;
     flex-wrap:wrap;
     align-content:flex-start;
     gap:7px;
-    flex:1 1 0;
-    min-width:0;
-    max-height:100%;
+    width:100%;
+    box-sizing:border-box;
+    max-height:60px; /* two rows of pills + breathing room */
     overflow-x:hidden;
     overflow-y:auto;
-    padding:calc((var(--ctl-h) - 22px) / 2) 6px 2px 0;
+    padding:4px 6px 0 0;
     scrollbar-width:thin;
     scrollbar-color:var(--brass-dim) transparent;
   }
@@ -622,27 +616,6 @@
     margin-right:4px;
     flex-shrink:0;
   }
-  .controlbar input.tag-filter-input{
-    flex:0 0 112px;
-    width:112px;
-    height:22px;
-    box-sizing:border-box;
-    min-width:0;
-    max-width:none;
-    background:var(--panel-2);
-    border:1px solid var(--hairline);
-    border-radius:12px;
-    color:var(--paper);
-    font-family:'IBM Plex Mono',monospace;
-    font-size:11px;
-    line-height:16px;
-    padding:3px 11px 3px 26px;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b909b' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='M15.5 15.5L21 21'/%3E%3C/svg%3E");
-    background-repeat:no-repeat;
-    background-position:9px center;
-    background-size:12px 12px;
-  }
-  .controlbar .tag-filter-input:focus{ outline:none; border-color:var(--brass-dim); }
   .ftag{
     font-family:'IBM Plex Mono',monospace;
     font-size:11px;
@@ -776,7 +749,7 @@
   .board{
     display:flex;
     gap:16px;
-    padding:22px 32px 40px;
+    padding:10px 32px 40px;
     overflow-x:auto;
     align-items:stretch;
     flex:1;
@@ -1842,13 +1815,13 @@
 </div>
 
 <div class="controlbar">
-  <div class="ctl-left">
   <div class="ctl-row">
   <div style="display:flex; gap:0; flex-shrink:0;">
     <button class="add-btn view-btn active" id="viewBoardBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px 0 0 999px;">☰ Board</button>
     <button class="add-btn view-btn" id="viewPostingsBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:0 999px 999px 0;">⊞ Postings Grid</button>
   </div>
   <input type="text" id="searchInput" placeholder="Search role, company, location, notes…" />
+  <input type="text" id="tagFilterInput" placeholder="Find tag…" autocomplete="off" spellcheck="false" style="display:none;" />
   <button class="add-btn" id="undoBtn" disabled title="Nothing to undo" style="border-radius:999px; margin-left:0; flex-shrink:0;">↶ Undo<span class="undo-count" id="undoCount">0</span></button>
   <div class="filter-sep"></div>
   <div class="ctl-actions">
@@ -1861,9 +1834,10 @@
         <button class="add-btn pair-right" id="importBtn" style="border-radius:0 999px 999px 0; margin-left:0;">Import</button>
       </div>
       <input type="file" id="importFile" accept="application/json" style="display:none;" />
-      <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; margin-left:16px;">Sync</button>
-      <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:15px; display:flex; align-items:center;">⚙</button>
-  </div>
+      <span class="btn-unit" id="syncUnit">
+        <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; margin-left:0;">Sync</button>
+        <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:15px; display:flex; align-items:center;">⚙</button>
+      </span>
   </div>
     <div class="ctl-subrow">
   <div class="reset-widths-wrap" id="resetColumnWidthsWrap" title="Reset column widths, and clear the search and any selected tag filters">
@@ -2360,40 +2334,37 @@ let tagFilterQuery = '';
 
 function renderFilterbar(){
   const bar = document.getElementById('filterbar');
+  const tagInput = document.getElementById('tagFilterInput');
   const tags = allTags();
-  // render() rebuilds this bar from scratch, so remember whether the field
-  // had focus (and where the caret was) to put it back after the rebuild.
-  const prevInput = document.getElementById('tagFilterInput');
-  const hadFocus = !!prevInput && document.activeElement === prevInput;
-  const caret = hadFocus ? prevInput.selectionStart : 0;
+  // The Find tag field lives in the control bar's first row and persists
+  // across renders (so it keeps focus and caret); only the tag array below
+  // is rebuilt.
+  if(!tagInput.dataset.wired){
+    tagInput.dataset.wired = '1';
+    tagInput.addEventListener('input', ()=>{
+      tagFilterQuery = tagInput.value;
+      renderFilterbar();
+    });
+  }
   if(tags.length === 0){
     bar.style.display = 'none';
     bar.innerHTML = '';
+    tagInput.style.display = 'none';
     return;
   }
-  bar.style.display = 'flex';
-  bar.innerHTML = `<div class="fb-inner"><div class="filter-sep fb-sep"></div><div class="fb-head"><div class="fb-stack"><span class="flabel">Filter by tag</span>` +
-    `<div class="fb-find"><input type="text" id="tagFilterInput" class="tag-filter-input" placeholder="Find tag…" autocomplete="off" spellcheck="false" />` +
-    (activeTagFilters.length ? `<button class="ftag clear" id="clearFilters">Clear</button>` : '') +
-    `</div></div></div><div class="filterbar-scroll" id="filterbarScroll"></div></div>`;
+  tagInput.style.display = '';
+  if(tagInput.value !== tagFilterQuery) tagInput.value = tagFilterQuery;
+  bar.style.display = 'block';
+  bar.innerHTML = `<div class="filterbar-scroll" id="filterbarScroll"></div>`;
 
   const scroll = document.getElementById('filterbarScroll');
-  const tagInput = document.getElementById('tagFilterInput');
-  tagInput.value = tagFilterQuery;
   const q = tagFilterQuery.trim().toLowerCase();
   const shown = q ? tags.filter(t => activeTagFilters.includes(t) || t.toLowerCase().includes(q)) : tags;
-  scroll.innerHTML = shown.length ? shown.map(t=>{
-    const ft = elideTagText(t);
-    return `<button class="ftag${activeTagFilters.includes(t)?' active':''}" data-tag="${escapeAttr(t)}"${ft.titleAttr}>${ft.display}</button>`;
-  }).join('') : `<span class="flabel">No matching tags</span>`;
-  tagInput.addEventListener('input', ()=>{
-    tagFilterQuery = tagInput.value;
-    renderFilterbar();
-  });
-  if(hadFocus){
-    tagInput.focus();
-    try{ tagInput.setSelectionRange(caret, caret); }catch(e){}
-  }
+  scroll.innerHTML = (activeTagFilters.length ? `<button class="ftag clear" id="clearFilters">Clear</button>` : '') +
+    (shown.length ? shown.map(t=>{
+      const ft = elideTagText(t);
+      return `<button class="ftag${activeTagFilters.includes(t)?' active':''}" data-tag="${escapeAttr(t)}"${ft.titleAttr}>${ft.display}</button>`;
+    }).join('') : `<span class="flabel">No matching tags</span>`);
 
   scroll.querySelectorAll('.ftag[data-tag]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
