@@ -318,6 +318,8 @@
   }
   .ctl-row .btn-unit .icon-btn{ height:var(--ctl-btn-h); width:var(--ctl-btn-h); padding:0; justify-content:center; }
   .ctl-subrow{ height:var(--ctl-btn-h); }
+  /* Group separators in the button row match the header's (24px). */
+  .ctl-row .filter-sep{ height:24px; margin:0 12px; }
   .ctl-row #searchInput{ width:clamp(120px, 18vw - 160px, 230px); }
   .ctl-row #tagFilterInput{ width:clamp(110px, 9vw - 20px, 150px); }
   /* Reset Filters / Card aging: right after the Sync unit, on the same line. */
@@ -353,16 +355,16 @@
     letter-spacing:0;
   }
   .topbar-main .resume-wrap{ margin-left:0; margin-right:20px; }
-  .topbar-main #resumeBtn, .ctl-actions #exportBtn, .ctl-actions #importBtn{ font-weight:700; }
+  .topbar-main #resumeBtn, .ctl-row #exportBtn, .ctl-row #importBtn{ font-weight:700; }
   /* .add-btn's default 20px left margin was pushing this button away from the stroke before it. */
   .topbar-main #resumeBtn{ margin-left:0; }
   /* The two button pairs sit 20px apart with no stroke between them; the
      stroke before the first pair separates them from the readouts. */
-  .ctl-actions .hdr-group{ margin-left:20px; }
+  .ctl-row .hdr-group{ margin-left:0; }
   /* Dark-brass seam between the two halves of each solid-brass pill pair
      (+ From Posting | + Manual Entry, Export | Import). */
-  .ctl-actions .pair-right{ position:relative; }
-  .ctl-actions .pair-right::before{
+  .ctl-row .pair-right{ position:relative; }
+  .ctl-row .pair-right::before{
     content:'';
     position:absolute;
     left:0;
@@ -411,7 +413,8 @@
     flex-direction:column;
     align-items:stretch;
     gap:0;
-    padding:10px 32px 0;
+    padding:10px 32px 10px;
+    border-bottom:1px solid var(--hairline);
   }
   .filter-sep{
     width:1px;
@@ -1286,7 +1289,7 @@
     transition:background .12s, border-color .12s, color .12s;
   }
   #settingsOverlay .modal-actions, #dialogOverlay .modal-actions, #resumeOverlay .modal-actions{ gap:6px; }
-  #settingsOverlay .modal-actions .btn, #dialogOverlay .modal-actions .btn, #resumeOverlay .modal-actions .btn{ margin-left:0 !important; } /* spacing comes from gap */
+  #settingsOverlay .modal-actions .btn, #dialogOverlay .modal-actions .btn, #resumeOverlay .modal-actions .btn{ margin-left:0 !important; white-space:nowrap; } /* spacing comes from gap */
   #settingsOverlay .btn:hover, #dialogOverlay .btn:hover, #resumeOverlay .btn:hover{ border-color:var(--brass-dim); }
   #settingsOverlay .btn.primary:hover, #dialogOverlay .btn.primary:hover, #resumeOverlay .btn.primary:hover{ background:#dab472; border-color:#dab472; }
   #settingsOverlay .btn.danger, #dialogOverlay .btn.danger, #resumeOverlay .btn.danger{
@@ -1825,21 +1828,16 @@
   <button class="add-btn" id="undoBtn" disabled title="Nothing to undo" style="border-radius:999px; margin-left:0; flex-shrink:0;">↶ Undo<span class="undo-count" id="undoCount">0</span></button>
   <div class="filter-sep"></div>
   <div class="ctl-actions">
-<div style="display:flex; gap:0;">
+      <div style="display:flex; gap:0;">
         <button class="add-btn entry-btn" id="openPaste">+ From Posting</button>
         <button class="add-btn entry-btn pair-right" id="openAdd">+ Manual Entry</button>
       </div>
-      <div class="hdr-group" style="display:flex; gap:0;">
-        <button class="add-btn" id="exportBtn" style="border-radius:999px 0 0 999px; margin-left:0;">Export</button>
-        <button class="add-btn pair-right" id="importBtn" style="border-radius:0 999px 999px 0; margin-left:0;">Import</button>
-      </div>
-      <input type="file" id="importFile" accept="application/json" style="display:none;" />
       <span class="btn-unit" id="syncUnit">
         <button class="add-btn" id="syncBtn" style="background:var(--panel-2); color:var(--paper); border:1px solid var(--hairline); border-radius:999px; margin-left:0;">Sync</button>
         <button class="icon-btn" id="settingsBtn" title="Sync settings" style="font-size:15px; display:flex; align-items:center;">⚙</button>
       </span>
   </div>
-    <div class="ctl-subrow">
+  <div class="ctl-subrow">
   <div class="reset-widths-wrap" id="resetColumnWidthsWrap" title="Reset column widths, and clear the search and any selected tag filters">
     <button id="resetColumnWidthsBtn" class="reset-widths-btn"></button>
     <span class="reset-widths-label">Reset Filters</span>
@@ -1849,6 +1847,12 @@
     <span>Card aging</span>
   </label>
     </div>
+  <div class="filter-sep"></div>
+      <div class="hdr-group" style="display:flex; gap:0;">
+        <button class="add-btn" id="exportBtn" style="border-radius:999px 0 0 999px; margin-left:0;">Export</button>
+        <button class="add-btn pair-right" id="importBtn" style="border-radius:0 999px 999px 0; margin-left:0;">Import</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json" style="display:none;" />
   </div>
   <div class="filterbar" id="filterbar" style="display:none;"></div>
 </div>
@@ -1966,6 +1970,7 @@
     <div class="modal-actions">
       <div style="flex:1;"></div>
       <button class="btn" id="dialogCancelBtn">Cancel</button>
+      <button class="btn danger" id="dialogAltBtn" style="display:none;">Alt</button>
       <button class="btn primary" id="dialogOkBtn" style="margin-left:8px;">OK</button>
     </div>
   </div>
@@ -2554,7 +2559,8 @@ function duplicateWarning(matches){
   return {
     message: `This posting may already exist. A matching card is ${age}, in ${where}.${extra}`,
     extraEl: buildCardPreview(m),
-    footer: 'Create it anyway?'
+    footer: 'Create it anyway, or replace the existing card with this one?',
+    match: m
   };
 }
 
@@ -3043,7 +3049,7 @@ function mergeCardsAndUsers(remoteCards, remoteUsers, remoteResumes){
 // leaves the app looking broken with zero feedback. These work everywhere.
 let dialogResolve = null;
 
-function openDialogInternal({message, showInput, showCancel, defaultValue = '', okLabel = 'OK', cancelLabel = 'Cancel', extraEl = null, footer = ''}){
+function openDialogInternal({message, showInput, showCancel, defaultValue = '', okLabel = 'OK', cancelLabel = 'Cancel', altLabel = '', extraEl = null, footer = ''}){
   return new Promise(resolve=>{
     dialogResolve = resolve;
     document.getElementById('dialogMessage').textContent = message || '';
@@ -3056,7 +3062,10 @@ function openDialogInternal({message, showInput, showCancel, defaultValue = '', 
     const footerP = document.getElementById('dialogFooter');
     footerP.textContent = footer || '';
     footerP.style.display = footer ? 'block' : 'none';
-    document.getElementById('dialogModal').style.width = extraEl ? '420px' : '360px';
+    document.getElementById('dialogModal').style.width = altLabel ? '480px' : extraEl ? '420px' : '360px';
+    const altBtn = document.getElementById('dialogAltBtn');
+    altBtn.textContent = altLabel;
+    altBtn.style.display = altLabel ? 'inline-block' : 'none';
     const inputField = document.getElementById('dialogInputField');
     const input = document.getElementById('dialogInput');
     if(showInput){
@@ -3090,6 +3099,7 @@ document.getElementById('dialogCancelBtn').addEventListener('click', ()=>{
   const showingInput = document.getElementById('dialogInputField').style.display === 'block';
   resolveDialog(showingInput ? null : false);
 });
+document.getElementById('dialogAltBtn').addEventListener('click', ()=> resolveDialog('alt'));
 document.getElementById('dialogInput').addEventListener('keydown', (e)=>{
   if(e.key === 'Enter'){
     e.preventDefault();
@@ -3102,6 +3112,12 @@ function askPrompt(message, defaultValue = ''){
 }
 async function askConfirm(message, okLabel = 'OK', cancelLabel = 'Cancel', extra = {}){
   return (await openDialogInternal({message, showInput:false, showCancel:true, okLabel, cancelLabel, ...extra})) === true;
+}
+// Three-way choice: resolves 'ok' (primary), 'alt' (the extra button), or
+// false (cancel).
+async function askChoice(message, {okLabel, altLabel, cancelLabel = 'Cancel', extraEl = null, footer = ''}){
+  const r = await openDialogInternal({message, showInput:false, showCancel:true, okLabel, cancelLabel, altLabel, extraEl, footer});
+  return r === true ? 'ok' : r === 'alt' ? 'alt' : false;
 }
 async function showAlertModal(message){
   await openDialogInternal({message, showInput:false, showCancel:false});
@@ -4954,14 +4970,23 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   // Brand-new entries only (not edits): warn if a card with the same
   // title + company already exists, and only create it if confirmed.
   // Cancelling leaves the form open so it can still be edited.
+  let replaceId = null;
   if(!editingId){
     const dupes = findDuplicateCards(data.role, data.company);
     if(dupes.length){
       const w = duplicateWarning(dupes);
-      if(!(await askConfirm(w.message, 'Create anyway', 'Cancel', {extraEl: w.extraEl, footer: w.footer}))) return;
+      const choice = await askChoice(w.message, {okLabel:'Create Anyway', altLabel:'Replace Existing Card', cancelLabel:'Cancel', extraEl: w.extraEl, footer: w.footer});
+      if(!choice) return;
+      if(choice === 'alt') replaceId = w.match.id;
     }
   }
   pushUndoSnapshot();
+  if(replaceId){
+    // Replace Existing Card: tombstone the old card (so the deletion syncs)
+    // and let the new one be created below.
+    const old = cards.find(c=>c.id===replaceId);
+    if(old){ old.deleted = true; old.updatedAt = Date.now(); }
+  }
   if(editingId){
     const idx = cards.findIndex(c=>c.id===editingId);
     if(idx > -1) cards[idx] = {...cards[idx], ...data};
