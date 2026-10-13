@@ -592,7 +592,7 @@
   /* Tag array: the only thing on the control bar's second line. Fills the
      full width, never scrolls sideways, and scrolls vertically past two
      rows of pills. (The Find tag field lives on the first line.) */
-  .filterbar{ min-width:0; }
+  .filterbar{ min-width:0; border-top:1px solid var(--hairline); margin-top:10px; padding-top:10px; }
   .filterbar-scroll{
     display:flex;
     flex-wrap:wrap;
@@ -819,7 +819,6 @@
     background:var(--accent);
     opacity:0.5;
     pointer-events:none;
-    transition:width 0.25s ease;
   }
   .col-tab .name{
     position:relative;
@@ -3738,99 +3737,112 @@ function renderNotesBlock(notes){
 // frame is the standard fix: it lets layout fully settle from whatever
 // triggered the resize before this callback makes any further changes,
 // rather than mutating and re-triggering synchronously.
+// Pure function of the card element — computes and applies its clip-path,
+// maxHeight cap, nameplate sizing and dot/checkbox vertical centering. Shared
+// by the ResizeObserver below (for live resizes, deferred to a frame to avoid
+// the reentrant-loop issue described above) and by render() (called
+// synchronously right after rebuilding the board, so cards never paint in
+// their unstyled "raw" shape for a frame before snapping into place).
+function applyCardGeometry(el){
+  if(!el.isConnected) return; // card may have been removed by a re-render before this ran
+  // entry.contentRect excludes padding (it's the content-box size) — with
+  // 30px+12px of horizontal padding on this element, that silently
+  // shrank every proportion computed below. getBoundingClientRect gives
+  // the real border-box width instead.
+  const w = el.getBoundingClientRect().width;
+  const cut = Math.max(0, w / 8);
+  // Cap board cards at 1.5x their width; previews in dialogs show the
+  // whole card, so they're exempt.
+  el.style.maxHeight = el.closest('.overlay, .modal') ? '' : (w * 1.5) + 'px';
+  const poly = `polygon(0 0, calc(100% - ${cut}px) 0, 100% ${cut}px, 100% 100%, 0 100%)`;
+  const bgFx = el.querySelector('.card-bg-fx');
+  if(bgFx) bgFx.style.clipPath = poly;
+  const fx = el.querySelector('.card-border-fx');
+  if(fx) fx.style.clipPath = poly;
+
+  const cardStyle = getComputedStyle(el);
+  const padLeft = parseFloat(cardStyle.paddingLeft) || 0;
+
+  // The nameplate structure always exists now (invisibly styled when
+  // there's no URL). It has its own top-right clip, same style as the
+  // card's — the pen button then sits on the card, in the triangular
+  // space that clip exposes (the nameplate's own background doesn't
+  // cover that corner, so the card shows through underneath it).
+  const nameplate = el.querySelector('.posting-link');
+  let npCut = 0;
+  if(nameplate){
+    // Right edge lands at 23/24 of the card's full width, measured from
+    // the card's own left edge, minus a small extra gap so the right
+    // side isn't flush against that boundary — balancing against the
+    // card's own generous left padding (30px vs. 12px on the right).
+    const npWidth = Math.max(0, (w * (23/24)) - padLeft - 18);
+    nameplate.style.width = npWidth + 'px';
+    // Only the top-right corner clipped — left edge and bottom-right
+    // both stay square. Same 1/8-of-width cut as the card's own clip,
+    // measured against the nameplate's own (narrower) width.
+    npCut = Math.max(0, npWidth / 8);
+    const npPoly = `polygon(0 0, calc(100% - ${npCut}px) 0, 100% ${npCut}px, 100% 100%, 0 100%)`;
+    nameplate.style.clipPath = npPoly;
+    const npFx = nameplate.querySelector(':scope > .link-border-fx');
+    if(npFx) npFx.style.clipPath = npPoly;
+    // Push the right padding in by the cut depth, so text content stops
+    // exactly where the diagonal starts rather than running up against
+    // (or under) the clipped corner.
+    nameplate.style.paddingRight = (npCut + 12) + 'px';
+
+    // Everything below the nameplate defaults to the card's full content
+    // width, which is further right than where the nameplate itself
+    // stops — match them to the nameplate's actual width so all their
+    // right edges align, rather than each section stopping wherever its
+    // own default sizing happens to land. pull-btn lives outside
+    // .card-fade-wrap now (see template — it's exempt from the fade),
+    // so it needs its own direct-child lookup rather than the rest.
+    ['.details', '.utags', '.card-body', '.nameplate-rule'].forEach(sel=>{
+      const target = el.querySelector(sel);
+      if(target) target.style.width = npWidth + 'px';
+    });
+    const pullBtn = el.querySelector(':scope > .pull-btn');
+    if(pullBtn) pullBtn.style.width = npWidth + 'px';
+  }
+
+  // Vertically center the Hopper select checkbox (and the colored type
+  // dot, on non-selectable cards) against the company name text itself —
+  // not the nameplate's own padded box, which sits higher than the text.
+  const cardRect = el.getBoundingClientRect();
+  const companyEl = el.querySelector('.company');
+  if(companyEl){
+    const companyRect = companyEl.getBoundingClientRect();
+    const companyCenterY = companyRect.top + companyRect.height / 2;
+    // Each target's own height differs (dot vs. checkbox), so center
+    // each individually rather than sharing one offset.
+    const selectMark = el.querySelector('.select-mark');
+    if(selectMark){
+      const smRect = selectMark.getBoundingClientRect();
+      selectMark.style.top = (companyCenterY - cardRect.top - smRect.height / 2) + 'px';
+    }
+    const dot = el.querySelector('.accent-dot');
+    if(dot){
+      const dotRect = dot.getBoundingClientRect();
+      dot.style.top = (companyCenterY - cardRect.top - dotRect.height / 2) + 'px';
+    }
+  }
+}
+
 const clipResizeObserver = new ResizeObserver(entries=>{
   entries.forEach(entry=>{
     const el = entry.target;
     if(!el.classList.contains('card')) return;
-    requestAnimationFrame(()=>{
-      if(!el.isConnected) return; // card may have been removed by a re-render before this frame ran
-      // entry.contentRect excludes padding (it's the content-box size) — with
-      // 30px+12px of horizontal padding on this element, that silently
-      // shrank every proportion computed below. getBoundingClientRect gives
-      // the real border-box width instead.
-      const w = el.getBoundingClientRect().width;
-      const cut = Math.max(0, w / 8);
-      // Cap board cards at 1.5x their width; previews in dialogs show the
-      // whole card, so they're exempt.
-      el.style.maxHeight = el.closest('.overlay, .modal') ? '' : (w * 1.5) + 'px';
-      const poly = `polygon(0 0, calc(100% - ${cut}px) 0, 100% ${cut}px, 100% 100%, 0 100%)`;
-      const bgFx = el.querySelector('.card-bg-fx');
-      if(bgFx) bgFx.style.clipPath = poly;
-      const fx = el.querySelector('.card-border-fx');
-      if(fx) fx.style.clipPath = poly;
-
-      const cardStyle = getComputedStyle(el);
-      const padLeft = parseFloat(cardStyle.paddingLeft) || 0;
-
-      // The nameplate structure always exists now (invisibly styled when
-      // there's no URL). It has its own top-right clip, same style as the
-      // card's — the pen button then sits on the card, in the triangular
-      // space that clip exposes (the nameplate's own background doesn't
-      // cover that corner, so the card shows through underneath it).
-      const nameplate = el.querySelector('.posting-link');
-      let npCut = 0;
-      if(nameplate){
-        // Right edge lands at 23/24 of the card's full width, measured from
-        // the card's own left edge, minus a small extra gap so the right
-        // side isn't flush against that boundary — balancing against the
-        // card's own generous left padding (30px vs. 12px on the right).
-        const npWidth = Math.max(0, (w * (23/24)) - padLeft - 18);
-        nameplate.style.width = npWidth + 'px';
-        // Only the top-right corner clipped — left edge and bottom-right
-        // both stay square. Same 1/8-of-width cut as the card's own clip,
-        // measured against the nameplate's own (narrower) width.
-        npCut = Math.max(0, npWidth / 8);
-        const npPoly = `polygon(0 0, calc(100% - ${npCut}px) 0, 100% ${npCut}px, 100% 100%, 0 100%)`;
-        nameplate.style.clipPath = npPoly;
-        const npFx = nameplate.querySelector(':scope > .link-border-fx');
-        if(npFx) npFx.style.clipPath = npPoly;
-        // Push the right padding in by the cut depth, so text content stops
-        // exactly where the diagonal starts rather than running up against
-        // (or under) the clipped corner.
-        nameplate.style.paddingRight = (npCut + 12) + 'px';
-
-        // Everything below the nameplate defaults to the card's full content
-        // width, which is further right than where the nameplate itself
-        // stops — match them to the nameplate's actual width so all their
-        // right edges align, rather than each section stopping wherever its
-        // own default sizing happens to land. pull-btn lives outside
-        // .card-fade-wrap now (see template — it's exempt from the fade),
-        // so it needs its own direct-child lookup rather than the rest.
-        ['.details', '.utags', '.card-body', '.nameplate-rule'].forEach(sel=>{
-          const target = el.querySelector(sel);
-          if(target) target.style.width = npWidth + 'px';
-        });
-        const pullBtn = el.querySelector(':scope > .pull-btn');
-        if(pullBtn) pullBtn.style.width = npWidth + 'px';
-      }
-
-      // Vertically center the Hopper select checkbox (and the colored type
-      // dot, on non-selectable cards) against the company name text itself —
-      // not the nameplate's own padded box, which sits higher than the text.
-      const cardRect = el.getBoundingClientRect();
-      const companyEl = el.querySelector('.company');
-      if(companyEl){
-        const companyRect = companyEl.getBoundingClientRect();
-        const companyCenterY = companyRect.top + companyRect.height / 2;
-        // Each target's own height differs (dot vs. checkbox), so center
-        // each individually rather than sharing one offset.
-        const selectMark = el.querySelector('.select-mark');
-        if(selectMark){
-          const smRect = selectMark.getBoundingClientRect();
-          selectMark.style.top = (companyCenterY - cardRect.top - smRect.height / 2) + 'px';
-        }
-        const dot = el.querySelector('.accent-dot');
-        if(dot){
-          const dotRect = dot.getBoundingClientRect();
-          dot.style.top = (companyCenterY - cardRect.top - dotRect.height / 2) + 'px';
-        }
-      }
-    });
+    requestAnimationFrame(()=> applyCardGeometry(el));
   });
 });
 
 function render(){
   const board = document.getElementById('board');
+  const boardScrollLeft = board.scrollLeft;
+  const colScrollTop = {};
+  board.querySelectorAll('.col-body[data-col], .postings-grid[data-col]').forEach(el=>{
+    colScrollTop[el.dataset.col] = el.scrollTop;
+  });
   clipResizeObserver.disconnect();
   board.innerHTML = '';
   board.classList.toggle('postings-mode', currentView === 'postings');
@@ -4287,6 +4299,17 @@ function render(){
     });
   }
 
+  board.scrollLeft = boardScrollLeft;
+  board.querySelectorAll('.col-body[data-col], .postings-grid[data-col]').forEach(el=>{
+    const saved = colScrollTop[el.dataset.col];
+    if(saved) el.scrollTop = saved;
+  });
+
+  // Apply card geometry synchronously now, in the same task as the rebuild
+  // above, so cards paint already clipped/sized instead of flashing their
+  // raw shape for a frame before the ResizeObserver's deferred pass corrects it.
+  board.querySelectorAll('.card').forEach(applyCardGeometry);
+
   renderBulkBar();
 
   // Mobile shell (see "MOBILE SHELL" below) is a separate, independently
@@ -4335,7 +4358,7 @@ function renderPostingsView(board, poolFor, buildCardEl, wireDropZone, buildColu
         <span>Hide ${currentUser ? escapeHtml(currentUser) + "'s" : 'my'} claimed</span>
       </label>
     </div>
-    <div class="postings-grid"></div>
+    <div class="postings-grid" data-col="postings"></div>
   `;
   board.appendChild(mainEl);
 
