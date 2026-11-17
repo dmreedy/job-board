@@ -1,5 +1,9 @@
 # Job Search Ledger
 
+[![CI](https://github.com/dmreedy/job-board/actions/workflows/ci.yml/badge.svg)](https://github.com/dmreedy/job-board/actions/workflows/ci.yml)
+
+**[Try it live →](https://dmreedy.com/job-board/)** — the hosted demo is the tracker itself; the scrape helper and sync backend are local/opt-in add-ons and aren't part of it (paste listing text manually, or point Sync at your own Apps Script deployment).
+
 A shared, single-file Kanban board for tracking a job search, built with vanilla HTML/CSS/JS and no build step. It has three parts:
 
 | Part | File | Purpose |
@@ -13,6 +17,16 @@ Supporting files: `test/merge.test.js` and `test/ui.test.js` (tests, see [Develo
 The tracker works fully offline and local-only. The scrape helper and the sync backend are independent add-ons.
 
 Licensed under the [GNU GPLv3](LICENSE) — see [License](#license) below.
+
+---
+
+## Screenshots
+
+| Board | Postings grid |
+|---|---|
+| ![Board view](docs/screenshots/board.png) | ![Postings grid view](docs/screenshots/postings-grid.png) |
+
+<img src="docs/screenshots/mobile.png" alt="Mobile layout" width="280" />
 
 ---
 

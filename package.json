@@ -8,7 +8,8 @@
     "start": "node scrape-server.js",
     "test:merge": "node test/merge.test.js job-tracker-v1.18.1.html",
     "test:ui": "node test/ui.test.js job-tracker-v1.18.1.html",
-    "test": "npm run test:merge && npm run test:ui"
+    "test": "npm run test:merge && npm run test:ui",
+    "screenshots": "node scripts/capture-screenshots.js"
   },
   "devDependencies": { "playwright": "^1.48.0" }
 }
