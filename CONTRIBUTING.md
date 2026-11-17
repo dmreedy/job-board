@@ -9,6 +9,8 @@ npm install          # only needed for the optional Playwright UI test
 npm start             # runs the scrape helper (scrape-server.js) at http://localhost:8787
 ```
 
+The tracker and `scrape-server.js` only need Node 18+ (for global `fetch`), but Playwright itself requires Node 20+ — use Node 20 or later if you're running `test:ui` or `screenshots`.
+
 ## Tests
 
 ```bash
