@@ -1,0 +1,27 @@
+Tag-array separator, scroll preservation, and render flicker fix
+
+- Added a hairline separator between the control bar's button rows and
+  the tag array (`.filterbar` now has `border-top`/padding instead of
+  sitting flush against the rows above).
+- render() rebuilds the entire board on every action, which was
+  silently resetting every column's scroll position (and the board's
+  horizontal scroll) back to the top/left on every card move, sort
+  change, filter edit, toggle, or view switch. render() now snapshots
+  `.col-body`/`.postings-grid` scrollTop (keyed by `data-col`) and
+  `board.scrollLeft` before the rebuild and restores them after.
+  `.postings-grid` gained a `data-col="postings"` attribute so it can
+  be keyed the same way as board columns.
+- Fixed heavy card flicker on every render: card geometry (clip-path
+  corners, maxHeight cap, nameplate sizing, dot/checkbox centering)
+  previously only applied via clipResizeObserver, whose callback
+  defers its writes one requestAnimationFrame to avoid a ResizeObserver
+  reentrancy loop — so every rebuilt card briefly painted "raw" before
+  snapping into shape a frame later. Extracted that logic into
+  `applyCardGeometry(el)`; render() now calls it synchronously right
+  after rebuilding the board, while clipResizeObserver still calls the
+  same function via requestAnimationFrame for genuine later resizes
+  (column drag-resize, window resize). Also removed `.col-fill`'s
+  `transition:width 0.25s ease`, which never had a legitimate "before"
+  state to animate from.
+
+Version: v1.18.0 -> v1.18.1 (patch — bugfixes and a visual tweak)

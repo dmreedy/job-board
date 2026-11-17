@@ -4,19 +4,21 @@ A shared, single-file Kanban board for tracking a job search, built with vanilla
 
 | Part | File | Purpose |
 |---|---|---|
-| **Tracker** | `job-tracker-vX.Y.Z.html` | The board itself. Open it in a browser. |
+| **Tracker** | `job-tracker-v1.18.1.html` | The board itself. Open it in a browser. |
 | **Scrape helper** *(optional)* | `scrape-server.js` | Local Node server that pulls role, company, location and salary out of a job-posting URL. |
 | **Sync backend** *(optional)* | `apps-script-backend.gs.txt` | Google Apps Script that stores cards and users in a Google Sheet, so several people (or devices) can share one board. |
 
-Supporting files: `test-merge.js` (tests for the sync/merge logic), `sample-job-tracker-import.json` (about 100 fictional cards to try the board with), and `commit-message.txt` (the message for the most recent change).
+Supporting files: `test/merge.test.js` and `test/ui.test.js` (tests, see [Development](#development)), `sample-job-tracker-import.json` (about 100 fictional cards to try the board with), and `commit-message.txt` (the message for the most recent change).
 
 The tracker works fully offline and local-only. The scrape helper and the sync backend are independent add-ons.
+
+Licensed under the [GNU GPLv3](LICENSE) — see [License](#license) below.
 
 ---
 
 ## Quick start
 
-1. Open the latest `job-tracker-*.html` in a browser. There is nothing to install.
+1. Open `job-tracker-v1.18.1.html` (the latest version file in this repo) in a browser. There is nothing to install.
 2. Optional: click **Import** and choose `sample-job-tracker-import.json` to load sample data. This replaces the current board.
 3. Optional: set up the [scrape helper](#scrape-helper) and the [sync backend](#sync-backend-google-sheet--apps-script) below.
 
@@ -153,12 +155,15 @@ The sheet is just storage. The merge logic lives in the board:
 
 ## Development
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup and release conventions, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for implementation notes.
+
 ### Tests
 
-`test-merge.js` extracts the real merge and dedupe functions from the HTML and runs them, so it tests the shipped code rather than a copy. It has 24 tests covering conflict resolution, tombstones, garbage collection, dedupe and resumes.
+`test/merge.test.js` extracts the real merge and dedupe functions from the HTML and runs them, so it tests the shipped code rather than a copy. It has 24 tests covering conflict resolution, tombstones, garbage collection, dedupe and resumes. `test/ui.test.js` is an optional Playwright/headless-Chromium regression pass over the live UI.
 
 ```bash
-node test-merge.js job-tracker-vX.Y.Z.html
+npm run test:merge    # node test/merge.test.js job-tracker-v1.18.1.html
+npm run test:ui        # optional, requires `npm install` first (Playwright)
 ```
 
 ### Conventions
@@ -173,3 +178,11 @@ node test-merge.js job-tracker-vX.Y.Z.html
 - Below roughly 1500px wide, the first control-bar line wraps. Reset Filters, Card aging and Export|Import can drop to a second row.
 - The scrape helper is best effort. Sites that block server-side requests or render postings client-side may return little.
 - The Apps Script shared key is a shared password, not per-user authentication. Treat the deployment URL and key as private.
+
+---
+
+## License
+
+Copyright (C) 2026 Derek Reedy.
+
+Licensed under the [GNU General Public License v3.0 or later](LICENSE). This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY — see the LICENSE file for the full terms.

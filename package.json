@@ -1,0 +1,14 @@
+{
+  "name": "job-tracker",
+  "version": "1.18.1",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node scrape-server.js",
+    "test:merge": "node test/merge.test.js job-tracker-v1.18.1.html",
+    "test:ui": "node test/ui.test.js job-tracker-v1.18.1.html",
+    "test": "npm run test:merge && npm run test:ui"
+  },
+  "devDependencies": { "playwright": "^1.48.0" }
+}

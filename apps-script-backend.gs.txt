@@ -1,0 +1,227 @@
+/**
+ * Job Search Ledger — shared backend (Google Apps Script + Google Sheet)
+ * -----------------------------------------------------------------------
+ * Deploy this bound to a Google Sheet with two tabs: "Cards" and "Users".
+ *
+ * Copyright (C) 2026 Derek Reedy
+ * Licensed under the GNU General Public License v3.0 or later.
+ * See the LICENSE file in the repository root for the full text.
+ *
+ * SETUP:
+ * 1. Create a new Google Sheet.
+ * 2. Rename the first tab to "Cards". Add this header row:
+ *    id | role | company | location | salary | column | date | url | tags | notes | owner | sourceId | updatedAt | deleted
+ * 3. Add a second tab named "Users". Add this header row:
+ *    name | resumeUrl | resumeUpdatedAt
+ *    (resumeUrl/resumeUpdatedAt hold each person's optional resume link —
+ *    see "NOTE ON RESUMES" below. If you're upgrading an existing sheet
+ *    that only has a "name" column, just add these two headers to the
+ *    existing row — the next sync fills them in.)
+ * 4. Extensions > Apps Script. Delete any starter code, paste this whole file in.
+ * 5. Change SECRET below to something only you and your friends know —
+ *    treat it like a shared password, not a public value.
+ * 6. Deploy > New deployment > type: "Web app".
+ *    - Execute as: Me
+ *    - Who has access: Anyone
+ *    (This does NOT make your data public — the SECRET check below still
+ *    gates every request. "Anyone" here just means "no Google login
+ *    required to call the URL", not "no authentication at all".)
+ * 7. Copy the deployment URL — that's what goes into the board's
+ *    Settings panel as the "Sync URL", with your SECRET as the "Sync key".
+ *
+ * If you ever change the code after deploying, use "Manage deployments" >
+ * edit > "New version" — just saving the script does NOT update a live
+ * deployment's URL behavior.
+ *
+ * NOTE ON "updatedAt": the board now merges local and remote data by
+ * comparing each card's updatedAt timestamp (last-write-wins per card,
+ * not per whole board) rather than blindly overwriting. This sheet is
+ * just the storage — all merge/dedup logic lives client-side in the
+ * board itself, so this script stays a plain read/write layer.
+ *
+ * NOTE ON "deleted": deletions are soft (tombstoned), not removed
+ * outright — a card with deleted=true is how the board tells other
+ * instances "this was removed" during a merge. The board itself
+ * garbage-collects old tombstones after ~30 days; this sheet doesn't
+ * need to do anything special with them beyond storing the column.
+ *
+ * NOTE ON RESUMES: each user may optionally link a resume. Same
+ * last-write-wins merge philosophy as cards (compared by
+ * resumeUpdatedAt, client-side), so this sheet just stores whatever
+ * it's given — including a blank resumeUrl, which the board uses as a
+ * tombstone for "link removed" rather than ever deleting the row.
+ * Always write both resumeUrl and resumeUpdatedAt together; don't hand-
+ * edit just one in the sheet or you'll desync the timestamp from the
+ * link it's meant to describe.
+ *
+ * NOTE ON TRANSPORT: every request — reads included — now goes through
+ * doPost, with SECRET carried in the JSON body as `key`, never in the
+ * URL. Reads used to be a GET with ?key=... in the query string, which
+ * (unlike a POST body) ends up in the browser's own history, in Apps
+ * Script's execution log (which records the full request URL, query
+ * string and all), and in a Referer header if anything ever navigates
+ * away from a page holding that URL. A custom "Authorization: Bearer
+ * ..." header would be the more conventional fix, but Apps Script web
+ * apps don't expose arbitrary request headers to doGet/doPost at all —
+ * the request body is the only private-ish channel actually available
+ * here, so that's what both reads and writes use. doGet is kept only
+ * to return a clear error for anyone still pointed at the old GET-based
+ * URL — redeploy this version and update the board's client to match;
+ * the two aren't cross-compatible on the sync endpoint's shape.
+ */
+
+const SECRET = 'CHANGE-ME-TO-SOMETHING-ONLY-YOUR-GROUP-KNOWS';
+
+const CARD_HEADERS = ['id','role','company','location','salary','column','date','url','tags','notes','owner','sourceId','updatedAt','deleted'];
+
+// GET is no longer supported for reads — see "NOTE ON TRANSPORT" above.
+// Kept around only so a stale bookmarked/cached GET URL (with its
+// now-retired ?key=... query param) fails with an explanation instead of
+// a silent 404, rather than being removed outright.
+function doGet(e){
+  return jsonOutput({error: 'This endpoint requires POST for all requests, including reads — see "NOTE ON TRANSPORT" in the script source. Update the board to a version that posts {key, action:"pull"} instead of using ?key=... in the URL.'});
+}
+
+function doPost(e){
+  let payload;
+  try{
+    payload = JSON.parse(e.postData.contents);
+  }catch(err){
+    return jsonOutput({error: 'bad request: could not parse JSON body'});
+  }
+  if(!checkAuth(payload.key)){
+    return jsonOutput({error: 'unauthorized'});
+  }
+
+  const ss = SpreadsheetApp.getActive();
+
+  // action:'pull' is a read — everything else (including old clients
+  // that never sent an action at all, back when doPost only ever meant
+  // "write") is treated as a push, so this stays compatible with any
+  // payload shape doPost has ever accepted.
+  if(payload.action === 'pull'){
+    const cards = readCards(ss.getSheetByName('Cards'));
+    const usersSheet = ss.getSheetByName('Users');
+    const users = readUsers(usersSheet);
+    const resumes = readResumes(usersSheet);
+    return jsonOutput({cards, users, resumes});
+  }
+
+  // Resumes are merged into what's already in the sheet (newest
+  // updatedAt wins per user) instead of overwritten wholesale like the
+  // cards are. A push is a device's full picture of the world as of its
+  // last pull — so a device that hasn't pulled since someone else linked
+  // a resume would otherwise push its stale, resume-less copy and wipe
+  // that person's link out of the sheet for everyone. The lock keeps two
+  // near-simultaneous pushes from interleaving that read-then-write.
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try{
+    const usersSheet = ss.getSheetByName('Users');
+    const mergedResumes = mergeResumes(readResumes(usersSheet), payload.resumes || {});
+    writeCards(ss.getSheetByName('Cards'), payload.cards || []);
+    writeUsers(usersSheet, payload.users || [], mergedResumes);
+  }finally{
+    lock.releaseLock();
+  }
+
+  return jsonOutput({ok: true});
+}
+
+// Per-user last-write-wins on updatedAt; an exact tie keeps what the sheet
+// already has. Same rule the board applies client-side (mergeUserResumes),
+// just enforced here too so the sheet itself can never go backwards.
+function mergeResumes(existing, incoming){
+  const merged = Object.assign({}, existing);
+  Object.keys(incoming || {}).forEach(name=>{
+    const inc = incoming[name] || {};
+    const cur = merged[name];
+    if(!cur || (Number(inc.updatedAt) || 0) > (Number(cur.updatedAt) || 0)){
+      merged[name] = { url: inc.url ? String(inc.url) : '', updatedAt: Number(inc.updatedAt) || 0 };
+    }
+  });
+  return merged;
+}
+
+function checkAuth(providedKey){
+  return typeof providedKey === 'string' && providedKey.length > 0 && providedKey === SECRET;
+}
+
+function jsonOutput(obj){
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function readCards(sheet){
+  const data = sheet.getDataRange().getValues();
+  const headers = data.shift();
+  return data
+    .filter(row => row.some(cell => cell !== '' && cell !== null))
+    .map(row => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = row[i]; });
+      obj.tags = obj.tags ? String(obj.tags).split(',').map(t=>t.trim()).filter(Boolean) : [];
+      obj.owner = (obj.owner === '' || obj.owner === null || obj.owner === undefined) ? null : String(obj.owner);
+      obj.sourceId = (obj.sourceId === '' || obj.sourceId === null || obj.sourceId === undefined) ? undefined : String(obj.sourceId);
+      obj.updatedAt = Number(obj.updatedAt) || 0;
+      obj.deleted = obj.deleted === true || obj.deleted === 'true' || obj.deleted === 'TRUE';
+      obj.id = String(obj.id);
+      return obj;
+    });
+}
+
+// Single clearContent + single setValues call each — avoids the per-row
+// appendRow-in-a-loop pattern, which is the main thing that makes Apps
+// Script sheet writes slow. clearContent (not clear) skips wiping
+// formatting/notes, which is marginally faster and doesn't destroy anything
+// you might manually format in the sheet.
+function writeCards(sheet, cards){
+  sheet.getRange(1, 1, Math.max(sheet.getMaxRows(), cards.length + 1), CARD_HEADERS.length).clearContent();
+  const rows = cards.map(c => CARD_HEADERS.map(h => {
+    if(h === 'tags') return (c.tags || []).join(',');
+    if(h === 'owner') return (c.owner === null || c.owner === undefined) ? '' : c.owner;
+    if(h === 'sourceId') return c.sourceId === undefined ? '' : c.sourceId;
+    if(h === 'updatedAt') return c.updatedAt || 0;
+    if(h === 'deleted') return !!c.deleted;
+    return c[h] !== undefined ? c[h] : '';
+  }));
+  const allRows = [CARD_HEADERS, ...rows];
+  sheet.getRange(1, 1, allRows.length, CARD_HEADERS.length).setValues(allRows);
+}
+
+function readUsers(sheet){
+  const data = sheet.getDataRange().getValues();
+  data.shift(); // header row
+  return data.map(r => r[0]).filter(name => name !== '' && name !== null && name !== undefined);
+}
+
+// Returns every user row as a resume entry, including blank ones — NOT
+// filtered down to just the ones with a link. A blank resumeUrl with a
+// real resumeUpdatedAt is a tombstone (the board's way of propagating "I
+// removed my resume link" to other devices); dropping blank rows here
+// would silently resurrect a removed link on anyone who still has the
+// old non-blank entry cached locally, since they'd just never hear about
+// the removal. See "NOTE ON RESUMES" at the top of this file.
+function readResumes(sheet){
+  const data = sheet.getDataRange().getValues();
+  data.shift(); // header row
+  const resumes = {};
+  data.forEach(r=>{
+    const name = r[0];
+    if(name === '' || name === null || name === undefined) return;
+    resumes[String(name)] = {
+      url: r[1] ? String(r[1]) : '',
+      updatedAt: Number(r[2]) || 0
+    };
+  });
+  return resumes;
+}
+
+function writeUsers(sheet, users, resumes){
+  sheet.getRange(1, 1, Math.max(sheet.getMaxRows(), users.length + 1), 3).clearContent();
+  const allRows = [['name','resumeUrl','resumeUpdatedAt'], ...users.map(u => {
+    const r = (resumes && resumes[u]) || {};
+    return [u, r.url || '', r.updatedAt || ''];
+  })];
+  sheet.getRange(1, 1, allRows.length, 3).setValues(allRows);
+}

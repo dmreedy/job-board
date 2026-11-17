@@ -1,7 +1,0 @@
-#!/bin/bash
-
-git status
-git add job-tracker.html
-git status
-git commit -F commit-message
-git push

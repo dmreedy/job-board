@@ -1,3 +1,0 @@
-#!/bin/bash
-
-node scrape-server.js

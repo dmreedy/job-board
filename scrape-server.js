@@ -10,6 +10,10 @@
  * Stop it any time with Ctrl+C.
  *
  * No dependencies beyond Node itself (18+, for global fetch).
+ *
+ * Copyright (C) 2026 Derek Reedy
+ * Licensed under the GNU General Public License v3.0 or later.
+ * See the LICENSE file in the repository root for the full text.
  */
 
 const http = require('http');
